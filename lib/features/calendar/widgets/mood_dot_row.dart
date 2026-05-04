@@ -32,7 +32,7 @@ class MoodDotRow extends StatelessWidget {
             '+$overflow',
             style: TextStyle(
               fontSize: 7,
-              color: Theme.of(context).colorScheme.outline,
+              color: context.cs.outline,
               height: 1,
             ),
           ),

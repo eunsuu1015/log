@@ -176,7 +176,7 @@ class _CalendarBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final colorScheme = context.cs;
     final selectedEntries = selectedDay != null
         ? _entriesForDay(selectedDay!)
         : <Entry>[];
@@ -228,6 +228,7 @@ class _CalendarBody extends StatelessWidget {
                 child: MoodDotRow(entries: entries.cast<Entry>()),
               );
             },
+            // 선택한 날짜를 진한색 원으로 표시
             selectedBuilder: (context, day, _) => Align(
               alignment: Alignment.center,
               child: Container(
@@ -248,6 +249,7 @@ class _CalendarBody extends StatelessWidget {
                 ),
               ),
             ),
+            // 오늘 날짜를 연한색 원으로 표시
             todayBuilder: (context, day, _) => Align(
               alignment: Alignment.center,
               child: Container(

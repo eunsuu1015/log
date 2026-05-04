@@ -5,6 +5,7 @@ import 'package:poopoolog/core/database/database_provider.dart';
 import 'package:poopoolog/core/extensions/entry_ext.dart';
 import 'package:poopoolog/core/models/record_model.dart';
 import 'package:poopoolog/features/record/record_provider.dart';
+import 'package:poopoolog/shared/theme/app_theme.dart';
 import 'package:poopoolog/utils/logger.dart';
 
 import '../../core/database/app_database.dart';
@@ -12,7 +13,7 @@ import '../../core/database/app_database.dart';
 /// 기록 생성(existingEntry == null) 및 수정(existingEntry != null)을 담당하는 화면.
 /// presetDate가 지정되면 해당 날짜로 날짜 필드를 초기화한다.
 class RecordScreen extends ConsumerStatefulWidget {
-  final DateTime? presetDate;
+  final DateTime? presetDate; // 화면에 세팅할 날짜 (달력에서 날짜를 선택했거나, 기록을 수정하는 경우)
   final Entry? existingEntry;
   final bool showAsSheet;
 
@@ -77,8 +78,8 @@ class _RecordScreenState extends ConsumerState<RecordScreen> {
               OutlinedButton(
                 onPressed: () => _confirmDelete(context, notifier, db),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: Theme.of(context).colorScheme.error,
-                  side: BorderSide(color: Theme.of(context).colorScheme.error),
+                  foregroundColor: context.cs.error,
+                  side: BorderSide(color: context.cs.error),
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -217,7 +218,7 @@ class _SectionLabel extends StatelessWidget {
       style: TextStyle(
         fontSize: 12,
         fontWeight: FontWeight.w500,
-        color: Theme.of(context).colorScheme.onSurfaceVariant,
+        color: context.cs.onSurfaceVariant,
       ),
     ),
   );
@@ -254,17 +255,16 @@ class _VisitedToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     return Container(
       decoration: BoxDecoration(
-        color: cs.surfaceContainerHighest.withOpacity(0.5),
+        color: context.cs.surfaceContainerHighest.withOpacity(0.5),
         borderRadius: BorderRadius.circular(10),
       ),
       child: SwitchListTile(
         value: value ?? false,
         onChanged: onChanged,
         title: const Text('화장실에 다녀왔어요', style: TextStyle(fontSize: 14)),
-        activeColor: cs.primary,
+        activeColor: context.cs.primary,
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
@@ -326,7 +326,7 @@ class _MoodSelector extends StatelessWidget {
                         fontWeight: sel ? FontWeight.w600 : FontWeight.w400,
                         color: sel
                             ? color
-                            : Theme.of(context).colorScheme.onSurfaceVariant,
+                            : context.cs.onSurfaceVariant,
                       ),
                     ),
                   ],
@@ -348,7 +348,6 @@ class _MemoField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     return TextField(
       style: TextStyle(fontSize: 14),
       controller: controller,
@@ -357,9 +356,9 @@ class _MemoField extends StatelessWidget {
       minLines: 3,
       decoration: InputDecoration(
         hintText: '자유롭게 기록하세요',
-        hintStyle: TextStyle(color: cs.outline, fontSize: 14),
+        hintStyle: TextStyle(color: context.cs.outline, fontSize: 14),
         filled: true,
-        fillColor: cs.surfaceContainerHighest.withOpacity(0.5),
+        fillColor: context.cs.surfaceContainerHighest.withOpacity(0.5),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
@@ -382,15 +381,14 @@ class _MemoQuickTags extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     return Wrap(
       spacing: 8,
       runSpacing: 8,
       children: _tags.map((tag) {
         return ActionChip(
           label: Text(tag),
-          labelStyle: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
-          backgroundColor: cs.surfaceContainerHighest.withValues(alpha: 0.5),
+          labelStyle: TextStyle(fontSize: 13, color: context.cs.onSurfaceVariant),
+          backgroundColor: context.cs.surfaceContainerHighest.withValues(alpha: 0.5),
           side: BorderSide.none,
           padding: const EdgeInsets.symmetric(horizontal: 4),
           onPressed: () => onTag(tag),
