@@ -1,0 +1,18 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "poopoolog (debug)",
+      "request": "launch",
+      "type": "dart",
+      "args": ["--dart-define-from-file=secrets.json"]
+    },
+    {
+      "name": "poopoolog (release)",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "release",
+      "args": ["--dart-define-from-file=secrets.json"]
+    }
+  ]
+}

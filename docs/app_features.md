@@ -1,232 +1,286 @@
-# Toilet Tracker — 앱 기능 문서
+# PooPooLog — 화면별 기능 명세
 
-> 화장실 방문 여부·기분·메모를 기록하고 캘린더·타임라인·통계로 시각화하는 개인 건강 기록 앱
+> 폴더 구조·데이터 모델·Provider 목록은 [PROJECT.md](../PROJECT.md) 참고.
+> 아키텍처·데이터 흐름 상세는 [architecture_analysis.md](architecture_analysis.md) 참고.
 
 ---
 
 ## 목차
 
-1. [앱 구조](#1-앱-구조)
-2. [캘린더 탭](#2-캘린더-탭)
-3. [기록 탭 (타임라인)](#3-기록-탭-타임라인)
-4. [통계 탭](#4-통계-탭)
-5. [기록 입력·수정 화면](#5-기록-입력수정-화면)
-6. [설정 화면](#6-설정-화면)
-7. [데이터 모델](#7-데이터-모델)
-8. [상태 관리 Provider 목록](#8-상태-관리-provider-목록)
-9. [기술 스택](#9-기술-스택)
+1. [캘린더 탭](#1-캘린더-탭)
+2. [타임라인 탭](#2-타임라인-탭)
+3. [통계 탭](#3-통계-탭)
+4. [기록 입력·수정 화면](#4-기록-입력수정-화면)
+5. [더보기 탭](#5-더보기-탭)
+6. [광고 (AdMob)](#6-광고-admob)
+7. [Android 홈 화면 위젯](#7-android-홈-화면-위젯)
+8. [앱 시작 시 처리 (Remote Config)](#8-앱-시작-시-처리-remote-config)
 
 ---
 
-## 1. 앱 구조
-
-```
-lib/
-├── main.dart                        # 앱 진입점, 서비스 초기화
-├── core/
-│   ├── database/                    # Drift ORM + SQLite
-│   ├── extensions/                  # MoodLevel·Entry 확장 함수
-│   ├── models/                      # RecordModel, MoodLevel enum
-│   ├── services/                    # 알림(NotificationService), 홈위젯(HomeWidgetService)
-│   └── utils/                       # Log 유틸리티
-├── features/
-│   ├── shell/                       # 하단 NavigationBar + IndexedStack
-│   ├── calendar/                    # 캘린더 탭
-│   ├── record/                      # 기록 입력·수정 화면
-│   ├── timeline/                    # 기록 탭 (타임라인)
-│   ├── stats/                       # 통계 탭
-│   └── settings/                    # 설정·알림설정 화면
-└── shared/
-    ├── theme/                       # Material 3 라이트·다크 테마
-    └── widgets/                     # 공용 위젯 (CupertinoTimePickerSheet)
-```
-
-하단 네비게이션은 `IndexedStack`으로 3개 탭(캘린더·기록·통계)을 메모리에 유지한다.
-
----
-
-## 2. 캘린더 탭
+## 1. 캘린더 탭
 
 **파일** `lib/features/calendar/calendar_screen.dart`
 
 ### 주요 기능
 
 | 기능 | 설명 |
-|---|---|
-| 월간 달력 | `table_calendar` 라이브러리, 좌우 스와이프로 월 이동 |
-| 기분 도트 | 기록이 있는 날짜 아래 기분 색상 도트 표시 (최대 5개, 초과 시 `+N`) |
-| 날짜 선택 | 기록 있음 → 하단 패널에 목록 표시 / 기록 없음 → 기록 입력 화면으로 이동 |
-| 월 피커 | 헤더 탭 시 Cupertino 드럼롤 스타일 연·월 선택기 (2026 ~ 현재년) |
+|------|------|
+| 월간 달력 | `table_calendar`, 좌우 스와이프로 월 이동 |
+| 기분 도트 | 기록 있는 날짜 아래 기분 색상 도트 (최대 5개, 초과 시 `+N`). 기분 표시 방식 설정과 무관하게 항상 색상 도트 표시 |
+| 날짜 선택 | 기록 있음 → 하단 패널 표시 / 기록 없음 → 기록 입력 화면 이동 |
+| 월 피커 | 헤더 탭 시 Cupertino 드럼롤 연·월 선택기. 최초 기록일 기준 minDate 제한 |
 | 오늘 이동 | 현재 월이 아닐 때 AppBar에 "오늘로 돌아가기" 버튼 노출 |
 | 기록 추가 | 우하단 FAB(+) 탭 → 기록 입력 화면 |
-| 설정 진입 | 우상단 설정 아이콘 → 설정 화면 |
+| 과거 경계 | 최초 기록일보다 이전 달을 스와이프로 넘어갈 경우 달력 대신 "푸푸로그를 시작하기 전이에요!" 안내 화면 표시 |
 
 ### 날짜 하단 패널 (`_DayPanel`)
 
-선택된 날짜에 기록이 있을 때 표시된다.
+선택된 날짜에 기록이 있을 때 표시.
 
-- `"m월 d일"` 헤더 + **"추가"** 버튼
+- `"m월 d일"` 헤더 + **추가** 버튼
 - 해당 날의 기록 목록 (`EntryCard` 리스트)
+- 리스트 하단 80px 여백 (FAB에 가리지 않도록)
 - 기록 탭 → 수정 화면으로 이동
+
+### 하위 위젯
+
+| 위젯 | 역할 |
+|------|------|
+| `MoodDotRow` | Entry 목록 → 기분 색상 도트 최대 5개, 초과 시 `+N` |
+| `MonthPickerSheet` | CupertinoPicker 2개 (연도·월) |
 
 ---
 
-## 3. 기록 탭 (타임라인)
+## 2. 타임라인 탭
 
 **파일** `lib/features/timeline/timeline_screen.dart`
 
 ### 주요 기능
 
 | 기능 | 설명 |
-|---|---|
-| 전체 기록 목록 | 최신순 정렬, 날짜별 그룹 |
-| 날짜 헤더 | 오늘·어제는 컬러 강조 + 왼쪽 바 / 그 외는 "m월 d일 (요일)" |
+|------|------|
+| 전체 기록 | 최신순 정렬, 날짜별 그룹 |
+| 날짜 헤더 | 모든 날짜 `"m월 d일 (요일)"` 형식 통일. 오늘은 Primary 컬러 + 좌측 수직 바로 강조 |
 | 기분 필터 | 상단 칩 5개: 전체 / 좋음 / 보통 / 나쁨 / 안 감 |
 | 기록 카드 | 기분 도트, 기분 레이블, 메모(2줄 요약), 시간 표시 |
+| 네이티브 광고 | 7번째 엔트리마다 광고 카드 삽입 |
 | Pull-to-refresh | 아래로 당겨 새로고침 |
-| 기록 수정 | 카드 탭 → 수정 화면으로 이동 |
-| 기록 추가 | 우하단 FAB(+) |
+| 페이징 | 초기 최근 6개월 로드, 스크롤 끝에서 6개월씩 추가 |
 | 빈 상태 | 기록 없음 / 필터 결과 없음 각각 다른 안내 메시지 |
+
+### 하위 위젯
+
+| 위젯 | 역할 |
+|------|------|
+| `FilterChipRow` | 기분 필터 칩 5개, `timelineFilterProvider` 읽기·쓰기 |
+| `DateHeader` | 날짜 그룹 헤더, 오늘·어제 색상 강조 |
+| `EntryCard` (`shared/widgets/`) | 기분 도트, 레이블, 메모(2줄), 시간 표시 |
 
 ---
 
-## 4. 통계 탭
+## 3. 통계 탭
 
 **파일** `lib/features/stats/stats_screen.dart`
 
 ### 기간 선택
 
 | 옵션 | 설명 |
-|---|---|
-| 이번 달 | 1일 ~ 오늘 (미래 날짜 제외) |
+|------|------|
+| 이번 달 | 1일 ~ 오늘 |
 | 최근 30일 | 오늘 기준 30일 전 ~ 오늘 |
 | 최근 3개월 | 이번 달 포함 3개월 |
-| 직접 지정 | DateRangePicker로 시작·종료일 선택 |
+| 직접 지정 | `DateRangePicker`로 시작·종료일 선택 |
 
 ### 요약 카드
 
-- **총 방문 횟수** — `"n번"` + `"n일 동안 방문"`
-- **방문한 날 수** — `"n일"` + `"n일 중 하루 이상 방문한 날"`
-- **주요 방문 시간** — `"HH시"` (피크 시간대)
+- **방문한 날 수** — `"n일"` + `"n일 중 방문한 날"`
+- **총 방문 횟수** — `"n회"` + `"n일 동안 방문 횟수"`
 
 ### 차트
 
 | 차트 | 설명 |
-|---|---|
-| 기분 분포 막대 차트 | 좋음·보통·나쁨 각 횟수, 막대 위에 횟수 레이블 |
-| 시간대별 방문 수평 막대 | 0~23시, 기록이 있는 시간대만 표시, 비율 기반 길이 |
+|------|------|
+| 기분 분포 도넛 차트 | 좋음·보통·나쁨 비율(%) 도넛. 우측에 기분별 횟수 범례 |
+| 시간대별 히트맵 그리드 | 0~23시 24칸, 6열×4행. 비율 기반 4단계 블루 계열 색상 (≤25%→연→진). 최다 방문 셀에 primary 테두리 강조. 헤더에 범례·"자세히 보기 ↑" 버튼 포함 |
 
-기간 내 데이터가 없으면 `"이 기간에 기록이 없어요"` 메시지 표시.
+#### 시간대 자세히 보기 (DraggableScrollableSheet)
+
+| 그룹 | 시간 범위 |
+|------|-----------|
+| 새벽 | 0 ~ 5시 |
+| 아침 | 6 ~ 11시 |
+| 오후 | 12 ~ 17시 |
+| 저녁 | 18 ~ 23시 |
+
+기록 있는 시간대만 표시. 최다 방문 시간대에 "최다" 뱃지.
+
+- 기간 내 데이터 없으면 Ghost UI (흐릿한 더미 통계 + 잠금 배지 + "첫 기록 남기기" CTA)
+- 기간 선택 후 데이터 없으면 `"이 기간에 기록이 없어요"` 표시
+- 화면 하단에 배너 광고 고정
 
 ---
 
-## 5. 기록 입력·수정 화면
+## 4. 기록 입력·수정 화면
 
 **파일** `lib/features/record/record_screen.dart`
 
 ### 입력 필드
 
 | 필드 | 위젯 | 설명 |
-|---|---|---|
-| 날짜 | `DatePicker` (Material) | 기록할 날짜 선택 |
-| 시간 | `CupertinoDatePicker` | iOS 드럼롤 휠, 24시간 포맷 |
-| 방문 여부 | `SwitchListTile` | 화장실에 다녀왔는지 토글 |
-| 기분 | 버튼 3개 | 좋음·보통·나쁨, 방문=ON일 때만 `AnimatedSize`로 노출 |
-| 메모 | `TextField` (4줄) | 자유 텍스트 입력 |
-| 빠른 태그 | `ActionChip` 5개 | 쾌변·설사·배아픔·잔변감·급했음 → 탭하면 메모에 자동 추가 |
+|------|------|------|
+| 날짜·시간 | `CupertinoDatePicker` | iOS 드럼롤 휠, 미래 시간 불가 |
+| 방문 여부 | `SwitchListTile` | true/false 토글, null 없음, 초기값 true |
+| 기분 | 버튼 3개 | 좋음·보통·나쁨, 재탭하면 null (선택 해제) |
+| 메모 | `TextField` (4줄) | 자유 텍스트, 빈 문자열은 null로 저장 |
+| 빠른 태그 | `ActionChip` 6개 | 쾌변·설사·묽음·배아픔·잔변감·급했음 → 탭하면 메모에 추가 |
 
-### 동작
+### 동작 규칙
 
-- **신규**: `presetDate` 전달 시 해당 날짜·현재 시각으로 초기화
-- **수정**: 기존 `Entry` 데이터로 폼 초기화
-- **저장**: DB upsert → 홈 위젯 데이터 갱신
-- **삭제** (수정 모드만): 확인 다이얼로그 후 DB 삭제
+- `visited = false`로 변경 시 `mood` 자동 null 초기화
+- 기분 선택 시 `visited` 자동 true 설정
+- `presetDate` 전달 시 해당 날짜·현재 시각으로 초기화
+- 저장 완료 후 5회마다 전면 광고 노출
 
----
+### 수정 모드
 
-## 6. 설정 화면
-
-**파일** `lib/features/settings/settings_screen.dart`
-
-### 알림 설정 (`NotificationSettingsScreen`)
-
-| 기능 | 설명 |
-|---|---|
-| 알림 ON/OFF | `SwitchListTile` 토글, 켜면 시스템 권한 요청 |
-| 알림 시간 | CupertinoDatePicker (iOS 스타일), 기본값 09:00 |
-| 설정 저장 | `SharedPreferences` 로컬 저장 |
-| 자동 재등록 | 앱 재시작 시 설정이 켜져 있으면 알림 스케줄 재등록 |
-
-알림 내용: 제목 `"기록할 시간이에요"` / 본문 `"오늘 화장실 기록을 남겨보세요"`
-
-### 홈 위젯 가이드
-
-- iOS: 홈 화면 길게 누르기 → `+` → 앱 검색 → 위젯 추가
-- Android: 홈 화면 길게 누르기 → 위젯 메뉴 → 위젯 찾아 추가
-
-홈 위젯에 표시되는 정보:
-- 오늘 방문 횟수
-- 마지막 기록의 기분 이모지 (😊 / 😐 / 😣)
-- 마지막 기록 시간 (`HH:mm`)
-- 날짜 레이블 (`m/d`)
-
-### 앱 정보
-
-- 버전 `1.0.0`
+- 기존 `Entry` 데이터로 폼 초기화
+- 하단에 **삭제** 버튼 추가 (확인 다이얼로그 포함)
 
 ---
 
-## 7. 데이터 모델
+## 5. 더보기 탭
 
-### Entries 테이블 (SQLite, Drift ORM)
+**파일** `lib/features/more/more_screen.dart`
 
-| 컬럼 | 타입 | 설명 |
-|---|---|---|
-| `id` | INTEGER (PK) | 자동 증가 |
-| `recordedAt` | DATETIME | 사용자가 설정한 기록 날짜·시간 |
-| `visited` | BOOLEAN (nullable) | 방문 여부 (`null` = 미입력) |
-| `mood` | INTEGER (nullable) | 0=좋음, 1=보통, 2=나쁨 |
-| `memo` | TEXT (nullable) | 자유 메모 |
-| `createdAt` | DATETIME | 앱에서 실제 저장된 시각 (자동) |
+| 섹션 | 항목 | 설명 |
+|------|------|------|
+| 결제 | 광고 없애기 | ₩2,900 일회성 인앱 결제로 모든 광고 영구 제거. `adsRemovedProvider` → `shared_preferences` 저장. 구매 복원 지원 |
+| 설정 | 다크모드 | 라이트 / 다크 / 기기 설정, `shared_preferences` 저장 |
+| 설정 | 기분 표시 방식 | `SegmentedButton` — 색상 도트 / 얼굴 아이콘 전환. `moodDisplayProvider` → `shared_preferences` 저장. 캘린더·타임라인·통계·기록 입력 전 화면 즉시 반영 |
+| 설정 | 주 시작 요일 | 달력 주 시작 요일 — 월요일 / 일요일. `startWeekdaySundayProvider` → `shared_preferences` 저장 |
+| 지원 | 피드백 보내기 | Google Forms 외부 링크 |
+| 정보 | 오픈소스 라이선스 | `showLicensePage` |
+| 정보 | 앱 버전 | 버전 표시 |
+| 데이터 | 내보내기 (CSV) | 전체 기록을 CSV로 내보내기 (`share_plus`) |
+| 데이터 | 가져오기 (CSV) | CSV 파일에서 기록 Upsert — 동일 `recordedAt` 있으면 덮어쓰고 없으면 추가. 확인 다이얼로그 포함. 헤더 컬럼명 기반 파싱으로 버전 호환 (`file_picker`) |
+| 데이터 | 데이터 초기화 | 확인 다이얼로그 후 전체 삭제 → 캘린더 탭으로 이동 |
 
-### MoodLevel enum
+### 히든 기능 — 테스트 데이터 생성
 
-| 값 | 레이블 | 색상 |
-|---|---|---|
-| `good` | 좋음 | `#639922` (초록) |
-| `okay` | 보통 | `#BA7517` (주황) |
-| `bad` | 나쁨 | `#E24B4A` (빨강) |
-| (없음) | 안 감 / 다녀옴 | `#B4B2A9` (회색) |
+앱 버전 항목을 **5회 탭** 시 활성화.
 
----
-
-## 8. 상태 관리 Provider 목록
-
-| Provider | 종류 | 역할 |
-|---|---|---|
-| `appDatabaseProvider` | Provider | AppDatabase 싱글톤 |
-| `calendarFocusedMonthProvider` | StateProvider | 캘린더에서 보고 있는 월 |
-| `selectedDayProvider` | StateProvider | 캘린더에서 선택된 날짜 |
-| `monthlyEntriesProvider` | FutureProvider.family | 월별 기록 Map (캘린더 도트용) |
-| `timelineFilterProvider` | StateProvider | 타임라인 기분 필터 |
-| `timelineProvider` | FutureProvider | 전체 기록 그룹 목록 |
-| `statsRangeProvider` | StateProvider | 통계 기간 설정 |
-| `statsResultProvider` | FutureProvider | 통계 계산 결과 |
-| `recordFormProvider` | NotifierProvider.family | 기록 폼 입력 상태 |
-| `notificationSettingsProvider` | AsyncNotifierProvider | 알림 설정 로드·저장 |
+- 2025년 10월 1일 ~ 오늘까지 매일 0~4개 랜덤 기록 삽입
+- `visited`: true / false 랜덤 (UI 스펙 상 null 제외)
+- `mood`: null 포함 4종 랜덤 (25% null / good / okay / bad)
+- `memo`: null 또는 빠른태그 문구 중 랜덤 (25% null)
+- 생성 중 로딩 다이얼로그 표시, 완료 후 SnackBar 알림
 
 ---
 
-## 9. 기술 스택
+## 6. 광고 (AdMob)
 
-| 역할 | 라이브러리 | 버전 |
-|---|---|---|
-| UI | Flutter + Material 3 | `>=3.19.0` |
-| 상태 관리 | flutter_riverpod | `^2.5.1` |
-| 데이터베이스 | drift + sqlite3_flutter_libs | `^2.18.0` |
-| 캘린더 | table_calendar | `^3.1.2` |
-| 차트 | fl_chart | `^0.68.0` |
-| 알림 | flutter_local_notifications + timezone | `^17.2.2` |
-| 홈 위젯 | home_widget | `^0.9.0` |
-| 로컬 저장소 | shared_preferences | `^2.2.3` |
-| 권한 | permission_handler | `^11.3.1` |
+> 현재 테스트 ID 사용 중. 출시 전 `lib/core/ads/ad_ids.dart`의 ID를 실제 AdMob ID로 교체 필요.
+> `AndroidManifest.xml`의 `APPLICATION_ID`, `ios/Runner/Info.plist`의 `GADApplicationIdentifier`도 함께 교체.
+
+| 광고 유형 | 위치 | 빈도         |
+|-----------|------|------------|
+| 전면 (Interstitial) | 기록 저장 완료 후 | 7회 저장마다 1회 |
+| 배너 (Banner) | 통계 화면 하단 | 항상 표시      |
+| 네이티브 (Native) | 타임라인 리스트 | 7번째 엔트리마다  |
+
+
+---
+
+## 7. Android 홈 화면 위젯
+
+**파일** `android/.../widget/PooPooWidget.kt`, `lib/core/widget/home_widget_service.dart`
+
+### 위젯 3종
+
+| 크기 | dp | 표시 정보 |
+|------|----|-----------|
+| 1×1 | ~57×57 | 오늘 방문 횟수 + + 버튼 |
+| 2×1 | ~120×57 | 오늘 방문 횟수 + 마지막 시각 + + 버튼 |
+| 2×2 | ~120×120 | 오늘 방문 횟수 + 마지막 시각 + 마지막 기분 + 오늘 기분 도트 목록 + + 버튼 |
+
+### 탭 액션
+
+| 탭 위치 | 동작 |
+|---------|------|
+| 위젯 본체 | 앱 열기 (캘린더 탭) |
+| + 버튼 | 기록 입력 화면 바로 열기 |
+
+### 갱신 트리거
+
+| 시점 | 처리 |
+|------|------|
+| 기록 저장·삭제 | `HomeWidgetService.update()` → `home_widget.updateWidget()` |
+| 자정 | `AlarmManager.setRepeating` (매일 00:00, 비정확 허용) |
+| 재부팅 | `BootReceiver` → `PooPooWidget.updateAll()` + 알람 재등록 |
+| 주기 fallback | `updatePeriodMillis="1800000"` (30분) |
+
+### 디자인
+
+- 배경: `GlanceMaterialTheme` widgetBackground (라이트/다크 자동)
+- 방문 횟수: `fontSize=26sp`, bold (1×1) / `22sp` bold (2×1, 2×2)
+- 레이블: `fontSize=9~11sp`, onSurfaceVariant 색상
+- + 버튼: 원형 32dp, primary 색상 배경
+- 기분 도트: 원형 8dp, 기분 색상 (좋음 #639922 / 보통 #BA7517 / 나쁨 #E24B4A / 없음 #B4B2A9)
+- cornerRadius: 16dp
+
+---
+
+## 8. 앱 시작 시 처리 (Remote Config)
+
+**파일** `lib/core/remote_config/`, `lib/features/update/`, `lib/features/notice/`
+
+### 처리 순서 (AppShell initState)
+
+```
+1. Remote Config fetch (app_config JSON)
+2. 강제 업데이트 확인  ──→  필요 시 팝업 표시 후 이후 로직 중단
+3. 홈 위젯 액션 확인
+4. 공지사항 팝업 확인
+```
+
+### Remote Config 파라미터
+
+| 키 | 타입 | 설명 |
+|----|------|------|
+| `app_config` | JSON | 공지·업데이트 통합 설정 |
+
+```json
+{
+  "notice": {
+    "id": "notice_001",
+    "title": "공지 제목",
+    "message": "공지 내용",
+    "notice_date": "2026-05-23",
+    "created_at": "2026-05-23"
+  },
+  "update": {
+    "latest_version": "1.0.0",
+    "force_update": false
+  }
+}
+```
+
+### 강제 업데이트
+
+| 조건 | 동작 |
+|------|------|
+| `force_update: true` + 현재 버전 < `latest_version` | 닫기 불가 팝업 표시 |
+| 팝업 내 확인 버튼 | 플랫폼별 스토어로 이동 (url_launcher) |
+| Remote Config fetch 실패 | `AppConfig.fallback` 사용 (강제 업데이트 없음) |
+
+- 버전 형식: `major.minor.patch` (예: `1.0.0`)
+- 뒤로가기·다이얼로그 외부 탭 모두 차단 (`PopScope(canPop: false)`, `barrierDismissible: false`)
+
+### 공지사항
+
+| 조건 | 동작 |
+|------|------|
+| `notice.id` 비어 있음 | 공지 없음, 팝업 미표시 |
+| 사용자가 '다시 보지 않음' 선택 | `SharedPreferences`에 id 저장, 이후 미표시 |
+| `id` 변경 시 | 다시 보지 않음 여부 무관하게 재표시 |

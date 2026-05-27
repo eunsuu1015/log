@@ -1,3 +1,6 @@
+// 앱 전역 AppDatabase 싱글턴 Provider.
+// 모든 DB 접근은 appDatabaseProvider를 통해 이루어진다.
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:poopoolog/core/database/app_database.dart';
 

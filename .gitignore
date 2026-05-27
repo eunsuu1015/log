@@ -46,6 +46,14 @@ linked_*.ds
 unlinked.ds
 unlinked_spec.ds
 
+# Secrets — 실제 AdMob ID, URL 등 민감 정보. secrets.example.json 참고
+secrets.json
+**/ios/Flutter/Secrets.xcconfig
+
+android/app/poopoolog.jks
+android/key.properties
+
+
 # Android related
 **/android/**/gradle-wrapper.jar
 .gradle/

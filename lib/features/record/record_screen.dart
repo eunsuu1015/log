@@ -1,8 +1,15 @@
+// 기록 생성 및 수정 화면. 방문 여부·기분·날짜시간·메모를 입력·저장·삭제한다.
+// existingEntry 유무로 신규/수정 모드를 구분하며, 저장 후 AdService가 전면 광고 빈도를 관리한다.
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:poopoolog/core/ads/ad_service.dart';
 import 'package:poopoolog/core/database/database_provider.dart';
+import 'package:poopoolog/core/iap/iap_provider.dart';
+import 'package:poopoolog/shared/widgets/mood_indicator.dart';
 import 'package:poopoolog/core/extensions/entry_ext.dart';
+import 'package:poopoolog/core/models/mood_display_provider.dart';
 import 'package:poopoolog/core/models/record_model.dart';
 import 'package:poopoolog/features/record/record_provider.dart';
 import 'package:poopoolog/shared/theme/app_theme.dart';
@@ -34,8 +41,8 @@ class _RecordScreenState extends ConsumerState<RecordScreen> {
 
   @override
   void initState() {
-    _memoCtrl = TextEditingController(text: widget.existingEntry?.memo ?? '');
     super.initState();
+    _memoCtrl = TextEditingController(text: widget.existingEntry?.memo ?? '');
   }
 
   @override
@@ -62,13 +69,18 @@ class _RecordScreenState extends ConsumerState<RecordScreen> {
       ),
       bottomNavigationBar: _buildBottomBar(context, formState, notifier, db),
       body: ListView(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
         children: _buildFormFields(context, formState, notifier),
       ),
     );
   }
 
-  Widget _buildBottomBar(BuildContext context, formState, notifier, db) {
+  Widget _buildBottomBar(
+    BuildContext context,
+    RecordFormState formState,
+    RecordFormNotifier notifier,
+    AppDatabase db,
+  ) {
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
@@ -80,14 +92,13 @@ class _RecordScreenState extends ConsumerState<RecordScreen> {
                 style: OutlinedButton.styleFrom(
                   foregroundColor: context.cs.error,
                   side: BorderSide(color: context.cs.error),
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  minimumSize: const Size(0, 52),
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(14),
                   ),
                 ),
-                child: const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 12),
-                ),
+                child: const Text('삭제', style: TextStyle(fontSize: 15)),
               ),
               const SizedBox(width: 12),
             ],
@@ -97,8 +108,22 @@ class _RecordScreenState extends ConsumerState<RecordScreen> {
                     ? null
                     : () async {
                         await notifier.save(db);
-                        if (context.mounted) Navigator.pop(context);
+                        if (!context.mounted) return;
+                        // 저장 후 전면 광고 노출 (5회마다 1회), 완료 후 화면 닫기
+                        AdService().onRecordSaved(
+                          adsRemoved: ref.read(adsRemovedProvider),
+                          onComplete: () {
+                            if (context.mounted) Navigator.pop(context);
+                          },
+                        );
                       },
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 52),
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
                 child: formState.isSaving
                     ? const SizedBox(
                         width: 20,
@@ -124,27 +149,37 @@ class _RecordScreenState extends ConsumerState<RecordScreen> {
   }
 
   /// 날짜·시간, 방문 여부, 기분, 메모 폼 필드 목록을 반환한다.
-  List<Widget> _buildFormFields(BuildContext context, formState, notifier) {
+  List<Widget> _buildFormFields(
+    BuildContext context,
+    RecordFormState formState,
+    RecordFormNotifier notifier,
+  ) {
     return [
       Row(
+        mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           const _SectionLabel(label: '날짜 · 시간'),
-          SizedBox(width: 10),
+          const SizedBox(width: 6),
+          TextButton.icon(
+            onPressed: () {
+              notifier.setRecordedAt(DateTime.now());
+              setState(() => _pickerKey = UniqueKey());
+            },
+            icon: const Icon(Icons.history, size: 16),
+            label: const Text('지금', style: TextStyle(fontSize: 12)),
+            style: TextButton.styleFrom(
+              visualDensity: VisualDensity.compact,
+              padding: EdgeInsets.zero,
+            ),
+          ),
+          const Spacer(),
           Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: TextButton.icon(
-              onPressed: () {
-                ref
-                    .read(recordFormProvider(widget.existingEntry).notifier)
-                    .setRecordedAt(DateTime.now());
-                setState(() => _pickerKey = UniqueKey());
-              },
-              icon: const Icon(Icons.history, size: 16),
-              label: Text('지금', style: TextStyle(fontSize: 12)),
-              style: TextButton.styleFrom(
-                visualDensity: VisualDensity.compact,
-                padding: const EdgeInsets.symmetric(horizontal: 8),
+            padding: const EdgeInsets.only(right: 10),
+            child: Text(
+              '오늘 이후 날짜는 선택할 수 없어요',
+              style: context.tt.labelSmall?.copyWith(
+                color: context.cs.onSurfaceVariant.withValues(alpha: 0.6),
               ),
             ),
           ),
@@ -156,14 +191,35 @@ class _RecordScreenState extends ConsumerState<RecordScreen> {
         arg: widget.existingEntry,
       ),
       const _SectionLabel(label: '화장실'),
+      const SizedBox(height: 6),
       _VisitedToggle(value: formState.visited, onChanged: notifier.setVisited),
-      SizedBox(height: 16),
+      const SizedBox(height: 16),
       const _SectionLabel(label: '기분'),
+      const SizedBox(height: 6),
       _MoodSelector(selected: formState.mood, onChanged: notifier.setMood),
-      SizedBox(height: 16),
-      const _SectionLabel(label: '메모'),
+      const SizedBox(height: 16),
+      Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.baseline,
+          textBaseline: TextBaseline.alphabetic,
+          children: [
+            Text(
+              '메모',
+              style: context.tt.labelMedium,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              '탭하면 메모에 추가돼요',
+              style: context.tt.labelSmall?.copyWith(
+                color: context.cs.onSurfaceVariant.withValues(alpha: 0.5),
+              ),
+            ),
+          ],
+        ),
+      ),
       _MemoField(controller: _memoCtrl, onChanged: notifier.setMemo),
-      SizedBox(height: 2),
+      const SizedBox(height: 8),
       _MemoQuickTags(
         onTag: (tag) {
           final cur = _memoCtrl.text;
@@ -171,10 +227,6 @@ class _RecordScreenState extends ConsumerState<RecordScreen> {
           _memoCtrl.text = next;
           notifier.setMemo(next);
         },
-      ),
-      const Text(
-        '탭하면 메모에 추가돼요',
-        style: TextStyle(fontSize: 12, color: Colors.black45),
       ),
       const SizedBox(height: 32),
     ];
@@ -194,11 +246,19 @@ class _RecordScreenState extends ConsumerState<RecordScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
             child: const Text('삭제', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
     );
+    if (ok == true) {
+      await notifier.delete(db);
+      if (ctx.mounted) Navigator.pop(ctx);
+    }
   }
 }
 
@@ -211,17 +271,7 @@ class _SectionLabel extends StatelessWidget {
   const _SectionLabel({required this.label});
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 8),
-    child: Text(
-      label,
-      style: TextStyle(
-        fontSize: 12,
-        fontWeight: FontWeight.w500,
-        color: context.cs.onSurfaceVariant,
-      ),
-    ),
-  );
+  Widget build(BuildContext context) => Text(label, style: context.tt.labelMedium);
 }
 
 class _CupertinoDatePicker extends ConsumerWidget {
@@ -233,15 +283,26 @@ class _CupertinoDatePicker extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return SizedBox(
-      height: 150,
-      child: CupertinoDatePicker(
-        mode: CupertinoDatePickerMode.dateAndTime,
-        initialDateTime: recordedAt,
-        use24hFormat: false,
-        onDateTimeChanged: (DateTime newDate) {
-          logger.d('select datetime : ${newDate}');
-          ref.read(recordFormProvider(arg).notifier).setRecordedAt(newDate);
-        },
+      height: 140,
+      child: MediaQuery(
+        data: MediaQuery.of(
+          context,
+        ).copyWith(textScaler: const TextScaler.linear(0.78)),
+        child: CupertinoDatePicker(
+          mode: CupertinoDatePickerMode.dateAndTime,
+          initialDateTime: recordedAt,
+          minimumDate: DateTime(2026, 5),
+          maximumDate: DateTime.now().copyWith(
+            hour: 23,
+            minute: 59,
+            second: 59,
+          ),
+          use24hFormat: false,
+          onDateTimeChanged: (DateTime newDate) {
+            logger.d('select datetime : $newDate');
+            ref.read(recordFormProvider(arg).notifier).setRecordedAt(newDate);
+          },
+        ),
       ),
     );
   }
@@ -257,15 +318,22 @@ class _VisitedToggle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: context.cs.surfaceContainerHighest.withOpacity(0.5),
+        color: context.cs.surfaceContainerHighest.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(10),
       ),
-      child: SwitchListTile(
-        value: value ?? false,
-        onChanged: onChanged,
-        title: const Text('화장실에 다녀왔어요', style: TextStyle(fontSize: 14)),
-        activeColor: context.cs.primary,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+      child: ListTile(
+        title: Text('화장실에 다녀왔어요', style: context.tt.titleSmall),
+        trailing: Transform.scale(
+          scale: 0.8,
+          child: Switch(
+            value: value ?? false,
+            onChanged: onChanged,
+            activeColor: context.cs.primary,
+          ),
+        ),
+        onTap: () => onChanged(!(value ?? false)),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+        minVerticalPadding: 0,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
@@ -274,32 +342,37 @@ class _VisitedToggle extends StatelessWidget {
 
 /// 좋음·보통·나쁨 세 개 버튼으로 기분을 선택하는 위젯.
 /// 색상·레이블은 MoodLevelX 확장을 사용해 별도 맵·메서드를 제거했다.
-class _MoodSelector extends StatelessWidget {
+/// 기분 표시 방식이 face일 때 아이콘 크기를 22px로 축소한다.
+class _MoodSelector extends ConsumerWidget {
   final MoodLevel? selected;
   final void Function(MoodLevel?) onChanged;
 
-  _MoodSelector({required this.selected, required this.onChanged});
+  const _MoodSelector({required this.selected, required this.onChanged});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    const moods = MoodLevel.values;
+    final isFace = ref.watch(moodDisplayProvider) == MoodDisplay.face;
+    final indicatorSize = isFace ? 22.0 : 28.0;
     return Row(
-      children: MoodLevel.values.map((m) {
+      children: moods.asMap().entries.map((e) {
+        final i = e.key;
+        final m = e.value;
         final sel = selected == m;
         final color = m.color;
         return Expanded(
           child: Padding(
-            padding: const EdgeInsets.only(right: 8),
+            padding: EdgeInsets.only(right: i < moods.length - 1 ? 8 : 0),
             child: GestureDetector(
               onTap: () => onChanged(sel ? null : m),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 150),
-                padding: const EdgeInsets.symmetric(vertical: 14),
+                padding: const EdgeInsets.symmetric(vertical: 8),
                 decoration: BoxDecoration(
                   color: sel
-                      ? color.withOpacity(0.15)
-                      : Theme.of(
-                          context,
-                        ).colorScheme.surfaceContainerHighest.withOpacity(0.4),
+                      ? color.withValues(alpha: 0.15)
+                      : Theme.of(context).colorScheme.surfaceContainerHighest
+                            .withValues(alpha: 0.5),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: sel ? color : Colors.transparent,
@@ -308,25 +381,23 @@ class _MoodSelector extends StatelessWidget {
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    Container(
-                      width: 10,
-                      height: 10,
-                      decoration: BoxDecoration(
-                        color: sel ? color : color.withOpacity(0.35),
-                        shape: BoxShape.circle,
+                    SizedBox(
+                      height: 28,
+                      child: Center(
+                        child: MoodIndicator(
+                          mood: m,
+                          visited: true,
+                          size: indicatorSize,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 10),
                     Text(
                       m.label,
-                      style: TextStyle(
-                        fontSize: 13,
+                      style: context.tt.titleSmall?.copyWith(
                         fontWeight: sel ? FontWeight.w600 : FontWeight.w400,
-                        color: sel
-                            ? color
-                            : context.cs.onSurfaceVariant,
+                        color: sel ? color : context.cs.onSurfaceVariant,
                       ),
                     ),
                   ],
@@ -344,21 +415,21 @@ class _MemoField extends StatelessWidget {
   final TextEditingController controller;
   final void Function(String) onChanged;
 
-  _MemoField({required this.controller, required this.onChanged});
+  const _MemoField({required this.controller, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
     return TextField(
-      style: TextStyle(fontSize: 14),
+      style: const TextStyle(fontSize: 12),
       controller: controller,
       onChanged: onChanged,
       maxLines: 4,
-      minLines: 3,
+      minLines: 1,
       decoration: InputDecoration(
         hintText: '자유롭게 기록하세요',
-        hintStyle: TextStyle(color: context.cs.outline, fontSize: 14),
+        hintStyle: const TextStyle(color: Colors.grey, fontSize: 12),
         filled: true,
-        fillColor: context.cs.surfaceContainerHighest.withOpacity(0.5),
+        fillColor: context.cs.surfaceContainerHighest.withValues(alpha: 0.5),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
@@ -372,26 +443,64 @@ class _MemoField extends StatelessWidget {
   }
 }
 
+/// 메모 입력창 하단에 표시되는 카테고리별 빠른 태그 위젯.
+/// 태그를 탭하면 메모 필드 끝에 해당 태그가 삽입된다.
 class _MemoQuickTags extends StatelessWidget {
   final void Function(String) onTag;
 
-  _MemoQuickTags({required this.onTag});
+  const _MemoQuickTags({required this.onTag});
 
-  static const _tags = ['쾌변', '설사', '묽음', '배아픔', '잔변감', '급했음'];
+  static const _categories = <(String, List<String>)>[
+    ('상태', ['쾌변', '설사', '묽음', '딱딱함']),
+    ('증상', ['배아픔', '잔변감', '급했음', '냄새 심함', '냄새 없음']),
+    ('식사', ['식후', '공복']),
+    ('기타', ['스트레스', '운동 후']),
+  ];
 
   @override
   Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: _tags.map((tag) {
-        return ActionChip(
-          label: Text(tag),
-          labelStyle: TextStyle(fontSize: 13, color: context.cs.onSurfaceVariant),
-          backgroundColor: context.cs.surfaceContainerHighest.withValues(alpha: 0.5),
-          side: BorderSide.none,
-          padding: const EdgeInsets.symmetric(horizontal: 4),
-          onPressed: () => onTag(tag),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      spacing: 6,
+
+      children: _categories.map((entry) {
+        final (label, tags) = entry;
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(top: 6, right: 6, bottom: 6),
+              child: Text(
+                label,
+                style: context.tt.labelSmall?.copyWith(
+                  color: context.cs.onSurfaceVariant.withValues(alpha: 0.7),
+                ),
+              ),
+            ),
+            Expanded(
+              child: Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: tags.map((tag) {
+                  return ActionChip(
+                    label: Text(tag),
+                    labelStyle: context.tt.labelSmall?.copyWith(
+                      color: context.cs.onSurfaceVariant,
+                    ),
+                    backgroundColor: context.cs.surfaceContainerHighest
+                        .withValues(alpha: 0.5),
+                    side: BorderSide.none,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 2,
+                      vertical: 2,
+                    ),
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    onPressed: () => onTag(tag),
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
         );
       }).toList(),
     );

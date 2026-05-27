@@ -24,6 +24,13 @@ extension MoodLevelX on MoodLevel {
     MoodLevel.okay => '보통',
     MoodLevel.bad => '나쁨',
   };
+
+  /// 기분 이모지
+  String get emoji => switch (this) {
+    MoodLevel.good => '😊',
+    MoodLevel.okay => '😐',
+    MoodLevel.bad => '😞',
+  };
 }
 
 /// Entry (Drift 생성 행) 확장 - UI 렌더링에 필요한 헬퍼 모음
@@ -44,10 +51,20 @@ extension EntryX on Entry {
     return MoodLevel.values[mood!].label;
   }
 
-  /// recordedAt을 "HH:mm" 형식 문자열로 반환
+  /// visited·mood 조합에 대응하는 이모지
+  String get moodEmoji {
+    if (visited == null) return '-';
+    if (visited == false) return '🚫';
+    if (mood == null) return '💩';
+    return MoodLevel.values[mood!].emoji;
+  }
+
+  /// recordedAt을 "오전/오후 H:mm" 형식 문자열로 반환
   String get timeStr {
-    final h = recordedAt.hour.toString().padLeft(2, '0');
-    final m = recordedAt.minute.toString().padLeft(2, '0');
-    return '$h:$m';
+    final hour = recordedAt.hour;
+    final minute = recordedAt.minute.toString().padLeft(2, '0');
+    final period = hour < 12 ? '오전' : '오후';
+    final h = hour == 0 ? 12 : (hour > 12 ? hour - 12 : hour);
+    return '$period $h:$minute';
   }
 }

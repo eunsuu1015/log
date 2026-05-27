@@ -4,17 +4,27 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:path/path.dart';
+import 'package:poopoolog/core/settings/display_settings.dart';
 import 'package:poopoolog/features/calendar/calendar_provider.dart';
 import 'package:poopoolog/features/calendar/widgets/month_picker_sheet.dart';
 import 'package:poopoolog/features/calendar/widgets/mood_dot_row.dart';
 import 'package:poopoolog/features/record/record_provider.dart';
 import 'package:poopoolog/features/record/record_screen.dart';
 import 'package:poopoolog/features/timeline/timeline_provider.dart';
+import 'package:poopoolog/shared/theme/app_theme.dart';
 import 'package:table_calendar/table_calendar.dart';
 
 import '../../core/database/app_database.dart';
 import '../../shared/widgets/entry_card.dart';
+
+/// 캘린더가 이동할 수 있는 가장 이른 날. 피커 minDate와 반드시 일치해야 한다.
+final _kCalendarFirstDay = DateTime(2026, 5, 1);
+
+/// 캘린더가 이동할 수 있는 가장 이른 달 (연-월만).
+final _kCalendarFirstMonth = DateTime(
+  _kCalendarFirstDay.year,
+  _kCalendarFirstDay.month,
+);
 
 /// 캘린더 탭 루트 위젯. Provider를 구독하고 _CalendarBody에 데이터를 내려준다.
 class CalendarScreen extends ConsumerWidget {
@@ -25,11 +35,28 @@ class CalendarScreen extends ConsumerWidget {
     final focusedMonth = ref.watch(calendarFocusedMonthProvider);
     final selectedDay = ref.watch(selectedDayProvider);
     final entriesAsync = ref.watch(monthlyEntriesProvider(focusedMonth));
-    // 로딩 중에는 이전에 캐시된 데이터를 그대로 사용 (스와이프 시 캘린더가 사라지지 않게
+    // 로딩 중에는 이전에 캐시된 데이터를 그대로 사용 (스와이프 시 캘린더가 사라지지 않게)
     final monthlyEntries = entriesAsync.valueOrNull ?? const {};
     final now = DateTime.now();
     final isCurrentMonth =
         focusedMonth.year == now.year && focusedMonth.month == now.month;
+    final nowMonth = DateTime(now.year, now.month);
+    final isPastMonth = focusedMonth.isBefore(nowMonth);
+
+    // 최초 기록일 기반 바운더리
+    final earliestDate = ref.watch(earliestEntryDateProvider).valueOrNull;
+    // 피커 minDate: 캘린더 firstDay(_kCalendarFirstDay)보다 앞설 수 없도록 클램프.
+    // earliestDate가 firstDay보다 이전이면 캘린더가 해당 달을 표시할 수 없으므로
+    // firstDay 월을 하한으로 사용한다.
+    final rawPickerMin = earliestDate != null
+        ? DateTime(earliestDate.year, earliestDate.month)
+        : nowMonth;
+    final pickerMinDate = rawPickerMin.isBefore(_kCalendarFirstMonth)
+        ? _kCalendarFirstMonth
+        : rawPickerMin;
+    final isBeforeEarliest =
+        earliestDate != null &&
+        focusedMonth.isBefore(DateTime(earliestDate.year, earliestDate.month));
 
     void goToToday() {
       final today = DateTime.now();
@@ -40,23 +67,43 @@ class CalendarScreen extends ConsumerWidget {
       ref.read(selectedDayProvider.notifier).state = today;
     }
 
+    Widget makeGoToTodayButton(bool isPast) {
+      return ElevatedButton(
+        onPressed: goToToday,
+        style: ElevatedButton.styleFrom(
+          minimumSize: Size.zero,
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min, // 버튼 크기를 내용물에 맞춤
+          children: [
+            if (!isPast) const Icon(Icons.arrow_back_ios, size: 14),
+            const Text('오늘'),
+            if (isPast) const Icon(Icons.arrow_forward_ios, size: 14),
+          ],
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('캘린더'),
         actions: [
           if (!isCurrentMonth)
-            IconButton(
-              tooltip: '오늘로 돌아가기',
-              icon: const Icon(Icons.today_outlined),
-              onPressed: goToToday,
-            ),
+            makeGoToTodayButton(isPastMonth),
+          const SizedBox(width: 10),
         ],
       ),
-      body: entriesAsync.hasError
+      body: isBeforeEarliest
+          ? _BeforeEarliestState(earliestDate: earliestDate)
+          : entriesAsync.hasError
           ? Center(child: Text('오류: ${entriesAsync.error}'))
           : _CalendarBody(
               focusedMonth: focusedMonth,
               monthlyEntries: monthlyEntries,
+              selectedDay: selectedDay,
+              startSunday: ref.watch(startWeekdaySundayProvider),
               onMonthChanged: (month) {
                 ref.read(calendarFocusedMonthProvider.notifier).state = month;
                 ref.read(selectedDayProvider.notifier).state = null;
@@ -65,7 +112,10 @@ class CalendarScreen extends ConsumerWidget {
                 ref.read(selectedDayProvider.notifier).state = day;
                 final dayKey = DateTime(day.year, day.month, day.day);
                 final entries = monthlyEntries[dayKey] ?? [];
-                if (entries.isEmpty) {
+                final isFuture = dayKey.isAfter(
+                  DateTime(now.year, now.month, now.day),
+                );
+                if (entries.isEmpty && !isFuture) {
                   _openRecordScreen(context, ref, day);
                 }
               },
@@ -73,6 +123,7 @@ class CalendarScreen extends ConsumerWidget {
                 final picked = await showMonthPickerSheet(
                   context: context,
                   current: focusedMonth,
+                  minDate: pickerMinDate,
                 );
                 if (picked != null) {
                   ref.read(calendarFocusedMonthProvider.notifier).state =
@@ -85,7 +136,7 @@ class CalendarScreen extends ConsumerWidget {
             ),
       floatingActionButton: FloatingActionButton(
         heroTag: 'fab_calendar',
-        onPressed: () => _openRecordScreen(context, ref, null),
+        onPressed: () => _openRecordScreen(context, ref, selectedDay),
         tooltip: '기록 추가',
         child: const Icon(Icons.add),
       ),
@@ -119,10 +170,6 @@ class CalendarScreen extends ConsumerWidget {
             );
       }
     }
-    // TODO: 애니메이션 프레임 작업? 일단 안 함
-    // invalidate와 시트 오픈을 같은 프레임에 실행하면 애니메이션 첫 프레임이
-    // rebuild 작업과 겹쳐서 오픈 애니메이션이 스킵되거나 끊김
-    // 다음 프레임에 열어서 현재 프레임 작업을 먼저 완료시킴
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -134,14 +181,8 @@ class CalendarScreen extends ConsumerWidget {
       final month = ref.read(calendarFocusedMonthProvider);
       ref.invalidate(monthlyEntriesProvider(month));
       ref.invalidate(timelineProvider);
-      // TODO: statsResultProvider 추가 (주석 풀기)
-      // ref.invalidate(statsResultProvider);
+      ref.invalidate(earliestEntryDateProvider);
     });
-
-    // Navigator.push(
-    //   context,
-    //   MaterialPageRoute(builder: (context) => const RecordScreen()),
-    // );
   }
 }
 
@@ -152,6 +193,7 @@ class _CalendarBody extends StatelessWidget {
   final DateTime focusedMonth;
   final DateTime? selectedDay;
   final Map<DateTime, List<Entry>> monthlyEntries;
+  final bool startSunday;
   final void Function(DateTime) onMonthChanged;
   final void Function(DateTime) onDaySelected;
   final VoidCallback onMonthPickerTap;
@@ -162,6 +204,7 @@ class _CalendarBody extends StatelessWidget {
     required this.focusedMonth,
     this.selectedDay,
     required this.monthlyEntries,
+    this.startSunday = false,
     required this.onMonthChanged,
     required this.onDaySelected,
     required this.onMonthPickerTap,
@@ -174,9 +217,34 @@ class _CalendarBody extends StatelessWidget {
     return monthlyEntries[key] ?? [];
   }
 
+  Widget _buildDayCircle(
+    BuildContext context,
+    DateTime day, {
+    required Color bgColor,
+    required Color textColor,
+  }) {
+    return Align(
+      alignment: Alignment.center,
+      child: Container(
+        width: 30,
+        height: 30,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(color: bgColor, shape: BoxShape.circle),
+        child: Text(
+          '${day.day}',
+          style: context.tt.titleSmall?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: textColor,
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final colorScheme = context.cs;
+    final colorScheme = ColorScheme.of(context);
+    final now = DateTime.now();
     final selectedEntries = selectedDay != null
         ? _entriesForDay(selectedDay!)
         : <Entry>[];
@@ -184,19 +252,38 @@ class _CalendarBody extends StatelessWidget {
     return Column(
       children: [
         TableCalendar(
-          firstDay: DateTime(2026),
-          lastDay: DateTime(DateTime.now().year, 12, 31),
-          daysOfWeekHeight: 30,
+          firstDay: _kCalendarFirstDay,
+          lastDay: DateTime(now.year, now.month + 2, 0),
+          startingDayOfWeek: startSunday
+              ? StartingDayOfWeek.sunday
+              : StartingDayOfWeek.monday,
+          daysOfWeekHeight: 20,
           focusedDay: focusedMonth,
-          rowHeight: 55,
+          rowHeight: 50,
           selectedDayPredicate: (day) => isSameDay(day, selectedDay),
           eventLoader: _entriesForDay,
           availableGestures: AvailableGestures.horizontalSwipe,
           headerStyle: const HeaderStyle(
             formatButtonVisible: false,
             titleCentered: true,
+            headerPadding: EdgeInsets.zero,
           ),
           calendarBuilders: CalendarBuilders(
+            dowBuilder: (context, day) {
+              const labels = ['월', '화', '수', '목', '금', '토', '일'];
+              final label = labels[day.weekday - 1];
+              final isWeekend = day.weekday == 6 || day.weekday == 7;
+              return Center(
+                child: Text(
+                  label,
+                  style: context.tt.labelSmall?.copyWith(
+                    color: isWeekend
+                        ? colorScheme.error
+                        : colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              );
+            },
             headerTitleBuilder: (context, day) => GestureDetector(
               onTap: onMonthPickerTap,
               child: Row(
@@ -205,10 +292,8 @@ class _CalendarBody extends StatelessWidget {
                 children: [
                   Text(
                     '${day.year}년 ${day.month}월',
-                    style: TextStyle(
-                      fontSize: 16,
+                    style: context.tt.titleMedium?.copyWith(
                       fontWeight: FontWeight.w600,
-                      color: colorScheme.onSurface,
                     ),
                   ),
                   const SizedBox(width: 2),
@@ -229,45 +314,18 @@ class _CalendarBody extends StatelessWidget {
               );
             },
             // 선택한 날짜를 진한색 원으로 표시
-            selectedBuilder: (context, day, _) => Align(
-              alignment: Alignment.center,
-              child: Container(
-                width: 30,
-                height: 30,
-                decoration: BoxDecoration(
-                  color: colorScheme.primary,
-                  shape: BoxShape.circle,
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  '${day.day}',
-                  style: TextStyle(
-                    color: colorScheme.onPrimary,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                  ),
-                ),
-              ),
+            selectedBuilder: (context, day, _) => _buildDayCircle(
+              context,
+              day,
+              bgColor: colorScheme.primary,
+              textColor: colorScheme.onPrimary,
             ),
             // 오늘 날짜를 연한색 원으로 표시
-            todayBuilder: (context, day, _) => Align(
-              alignment: Alignment.center,
-              child: Container(
-                width: 30,
-                height: 30,
-                decoration: BoxDecoration(
-                  color: colorScheme.primaryContainer,
-                  shape: BoxShape.circle,
-                ),
-                child: Text(
-                  '${day.day}',
-                  style: TextStyle(
-                    color: colorScheme.onPrimaryContainer,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                  ),
-                ),
-              ),
+            todayBuilder: (context, day, _) => _buildDayCircle(
+              context,
+              day,
+              bgColor: context.cs.primary,
+              textColor: Colors.white,
             ),
           ),
           onDaySelected: (selected, _) => onDaySelected(selected),
@@ -279,21 +337,9 @@ class _CalendarBody extends StatelessWidget {
             markersAlignment: Alignment.bottomCenter,
             markerDecoration: BoxDecoration(),
           ),
-          daysOfWeekStyle: DaysOfWeekStyle(
-            weekdayStyle: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
-              color: colorScheme.onSurfaceVariant,
-            ),
-            weekendStyle: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
-              color: colorScheme.error,
-            ),
-          ),
         ),
-        const SizedBox(height: 20),
-        const Divider(height: 3, thickness: 3, color: Color(0x33808080)),
+        const SizedBox(height: 15),
+        const Divider(height: 1, thickness: 1, color: Color(0x33808080)),
         if (selectedDay != null && selectedEntries.isNotEmpty) ...[
           _DayPanel(
             date: selectedDay!,
@@ -307,6 +353,42 @@ class _CalendarBody extends StatelessWidget {
   }
 }
 
+/// 최초 기록일 이전 달을 보고 있을 때 표시하는 안내 위젯
+class _BeforeEarliestState extends StatelessWidget {
+  final DateTime earliestDate;
+  const _BeforeEarliestState({required this.earliestDate});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.calendar_today_outlined,
+            size: 48,
+            color: cs.outlineVariant,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            '푸푸로그를 시작하기 전이에요!',
+            style: context.tt.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            '첫 기록은 ${earliestDate.year}년 ${earliestDate.month}월 ${earliestDate.day}일입니다.',
+            style: context.tt.titleSmall?.copyWith(
+              fontWeight: FontWeight.w400,
+              color: cs.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// 선택된 날짜의 기록 목록과 추가 버튼을 보여주는 하단 패널
 class _DayPanel extends StatelessWidget {
   final DateTime date;
@@ -314,7 +396,7 @@ class _DayPanel extends StatelessWidget {
   final VoidCallback onAddEntry;
   final void Function(Entry) onEditEntry;
 
-  _DayPanel({
+  const _DayPanel({
     required this.date,
     required this.entries,
     required this.onAddEntry,
@@ -323,18 +405,19 @@ class _DayPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tt = Theme.of(context).textTheme;
-
     return Expanded(
       child: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 6, 12, 2),
+            padding: const EdgeInsets.fromLTRB(15, 6, 12, 2),
             child: Row(
               children: [
                 Text(
                   '${date.month}월 ${date.day}일',
-                  style: tt.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+                  style: context.tt.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.1,
+                  ),
                 ),
                 const Spacer(),
                 TextButton.icon(
@@ -353,10 +436,9 @@ class _DayPanel extends StatelessWidget {
             ),
           ),
           Expanded(
-            child: ListView.separated(
-              padding: const EdgeInsets.fromLTRB(10, 0, 10, 0),
+            child: ListView.builder(
+              padding: const EdgeInsets.fromLTRB(0, 0, 10, 80),
               itemCount: entries.length,
-              separatorBuilder: (_, __) => const SizedBox.shrink(),
               itemBuilder: (_, i) => EntryCard(
                 entry: entries[i],
                 onTap: () => onEditEntry(entries[i]),

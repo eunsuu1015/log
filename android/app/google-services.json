@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "838065905142",
+    "project_id": "poopoolog-d27ed",
+    "storage_bucket": "poopoolog-d27ed.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:838065905142:android:bf872ddf09bbf0ae183bd7",
+        "android_client_info": {
+          "package_name": "com.tistory.es1015.poopoolog"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCWdYubEKeoygcC6_Sgb5-wBa1DOCbMdEc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

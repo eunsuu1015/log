@@ -10,6 +10,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/database/app_database.dart';
 import '../../core/models/record_model.dart';
+import '../../core/widget/home_widget_service.dart';
+import '../stats/stats_provider.dart';
+import '../timeline/timeline_provider.dart';
 
 const _s = Object();
 
@@ -63,7 +66,7 @@ class RecordFormNotifier extends FamilyNotifier<RecordFormState, Entry?> {
         memo: arg.memo,
       );
     }
-    return RecordFormState(recordedAt: DateTime.now());
+    return RecordFormState(recordedAt: DateTime.now(), visited: true);
   }
 
   /// 기록 날짜·시간을 변경한다.
@@ -107,7 +110,10 @@ class RecordFormNotifier extends FamilyNotifier<RecordFormState, Entry?> {
         await db.insertEntry(companion);
       }
       state = state.copyWith(isSaving: false);
-    } catch (e, s) {
+      ref.invalidate(timelineProvider);
+      ref.invalidate(statsResultProvider);
+      HomeWidgetService.update(db).ignore();
+    } catch (e) {
       state = state.copyWith(isSaving: false);
       rethrow;
     }
@@ -119,11 +125,10 @@ class RecordFormNotifier extends FamilyNotifier<RecordFormState, Entry?> {
     if (existingEntry == null) {
       return;
     }
-    try {
-      await db.deleteEntry(existingEntry!.id);
-    } catch (e, s) {
-      rethrow;
-    }
+    await db.deleteEntry(existingEntry!.id);
+    ref.invalidate(timelineProvider);
+    ref.invalidate(statsResultProvider);
+    HomeWidgetService.update(db).ignore();
   }
 }
 

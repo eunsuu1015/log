@@ -1,109 +1,105 @@
-# Toilet Tracker — 프로젝트 설명
-
-## 개요
-
-**화장실 방문 기록 앱** (Flutter).
-언제 화장실을 다녀왔는지, 그때 컨디션이 어땠는지를 기록하고 캘린더 / 타임라인 / 통계로 확인하는 헬스 트래킹 앱.
-
----
-
-## 기술 스택
-
-| 영역 | 패키지 |
-|------|--------|
-| 상태 관리 | `flutter_riverpod` |
-| 데이터베이스 | `drift` (SQLite ORM) |
-| 캘린더 UI | `table_calendar` |
-| 차트 | `fl_chart` |
-| 알림 | `flutter_local_notifications` |
-| 홈 위젯 | `home_widget` |
-| 설정 저장 | `shared_preferences` |
-
----
+# PooPooLog — 프로젝트 문서
 
 ## 폴더 구조
 
 ```
 lib/
-├── main.dart
+├── main.dart                             # 앱 진입점, AdMob 초기화, 테마 로드
 ├── core/
+│   ├── ads/
+│   │   ├── ad_ids.dart                   # 플랫폼별 광고 단위 ID (출시 전 실제 ID로 교체)
+│   │   ├── ad_service.dart               # 전면 광고 싱글톤 (로드·노출·빈도 관리)
+│   │   ├── banner_ad_widget.dart         # 배너 광고 위젯
+│   │   └── native_ad_widget.dart         # 네이티브 광고 위젯
 │   ├── database/
-│   │   ├── app_database.dart        # Drift DB 정의, CRUD 쿼리, 변환 확장
-│   │   ├── app_database.g.dart      # Drift 코드 생성 결과 (자동)
-│   │   └── database_provider.dart   # AppDatabase Riverpod Provider
+│   │   ├── app_database.dart             # Drift DB 정의, CRUD 메서드, 변환 확장
+│   │   ├── app_database.g.dart           # 코드 생성 결과 (수정 금지)
+│   │   └── database_provider.dart        # AppDatabase Riverpod Provider
 │   ├── extensions/
-│   │   └── entry_ext.dart           # MoodLevelX · EntryX 확장 (색상·레이블·시간 포맷)
+│   │   └── entry_ext.dart                # MoodLevelX · EntryX 확장 (색상·레이블·시간)
+│   ├── iap/
+│   │   └── iap_provider.dart             # adsRemovedProvider, PurchaseNotifier (인앱 결제)
 │   ├── models/
-│   │   └── record_model.dart        # MoodLevel enum, RecordModel 값 객체
-│   └── services/
-│       ├── home_widget_service.dart # 홈 화면 위젯 업데이트
-│       └── notification_service.dart# 로컬 알림 스케줄링
-├── features/
-│   ├── calendar/
-│   │   ├── calendar_screen.dart     # 캘린더 탭 화면
-│   │   ├── calendar_provider.dart   # 포커스 달·월별 기록·선택 날짜 Provider
-│   │   └── widgets/
-│   │       ├── mood_dot_row.dart    # 날짜 셀 기분 도트 행
-│   │       ├── day_records_sheet.dart  # 선택된 날 기록 시트
-│   │       └── month_picker_sheet.dart # 연/월 빠른 선택 피커
-│   ├── timeline/
-│   │   ├── timeline_screen.dart     # 타임라인 탭 화면
-│   │   ├── timeline_provider.dart   # 필터·그룹화·정렬 Provider
-│   │   └── widgets/
-│   │       ├── entry_card.dart      # 단일 기록 행 위젯
-│   │       ├── date_header.dart     # 날짜 그룹 헤더
-│   │       └── filter_chip_row.dart # 기분 필터 칩 행
-│   ├── record/
-│   │   ├── record_screen.dart       # 기록 입력·수정 화면
-│   │   └── record_provider.dart     # 폼 상태 관리 Notifier
-│   ├── stats/
-│   │   ├── stats_screen.dart        # 통계 화면 (요약·기분 차트·시간대 차트)
-│   │   └── stats_provider.dart      # 기간 설정·집계 계산 Provider
+│   │   ├── record_model.dart             # MoodLevel enum, RecordModel 값 객체
+│   │   └── mood_display_provider.dart    # MoodDisplay enum, moodDisplayProvider, loadMoodDisplay()
 │   ├── settings/
-│   │   ├── settings_screen.dart     # 설정 화면
-│   │   └── notification_settings_screen.dart # 알림 설정
-│   └── shell/
-│       └── app_shell.dart           # 하단 탭 네비게이션 쉘
-└── shared/
-    └── theme/
-        └── app_theme.dart           # 기분 색상 상수 + 라이트·다크 테마
+│   │   └── display_settings.dart         # startWeekdaySundayProvider
+│   └── widget/
+│       └── home_widget_service.dart      # HomeWidgetService — 홈 화면 위젯 데이터 갱신
+├── features/
+│   ├── shell/
+│   │   └── app_shell.dart                # 하단 탭 네비게이션 (4탭), currentTabProvider
+│   ├── calendar/
+│   │   ├── calendar_screen.dart
+│   │   ├── calendar_provider.dart
+│   │   └── widgets/
+│   │       ├── mood_dot_row.dart          # 날짜 셀 기분 도트 행
+│   │       └── month_picker_sheet.dart   # 연·월 빠른 선택 피커
+│   ├── timeline/
+│   │   ├── timeline_screen.dart
+│   │   ├── timeline_provider.dart
+│   │   └── widgets/
+│   │       ├── date_header.dart           # 날짜 그룹 헤더
+│   │       └── filter_chip_row.dart       # 기분 필터 칩 행
+│   ├── record/
+│   │   ├── record_screen.dart
+│   │   └── record_provider.dart
+│   ├── stats/
+│   │   ├── stats_screen.dart
+│   │   ├── stats_provider.dart
+│   │   └── widgets/
+│   │       ├── summary_card.dart          # 요약 카드 위젯
+│   │       └── stat_heat_map_grid.dart    # 시간대별 수평 막대 차트
+│   └── more/
+│       └── more_screen.dart
+├── shared/
+│   ├── theme/
+│   │   ├── app_theme.dart                # 기분 색상 상수, 라이트·다크 테마
+│   │   └── style.dart                    # 공통 텍스트 스타일 상수
+│   └── widgets/
+│       ├── entry_card.dart               # 공용 기록 카드 위젯
+│       ├── mood_indicator.dart           # MoodIndicator — dot/face 전환 통합 위젯
+│       └── mood_face_painter.dart        # CustomPainter — 웃음/일자/찡그림 얼굴
+└── utils/
+    └── logger.dart                       # 디버그 로거
 ```
 
 ---
 
-## 화면 구성 (3탭)
+## 화면 구성 (4탭)
 
-### 1. 캘린더 탭
-- `TableCalendar` 기반 월간 달력
-- 각 날짜에 기분 도트 (최대 5개, 초과 시 `+N`) 표시
-- 날짜 탭 → 해당 날 기록 하단 패널에 표시
-- 헤더 탭 → `CupertinoPicker`로 연/월 빠른 이동
-- 다른 달로 이동했을 때만 "오늘로 돌아가기" 버튼 노출
+### 1. 캘린더
+- `TableCalendar` 기반 월간 달력, 기분 도트 표시
+- 날짜 탭 → 하단 패널에 기록 목록 / 기록 없으면 입력 화면 이동
+- 헤더 탭 → 연·월 피커 (Cupertino 드럼롤)
 
-### 2. 타임라인 탭
-- 전체 기록을 최신순 + 날짜별 그룹으로 표시
-- 필터: 전체 / 좋음 / 보통 / 나쁨 / 안 감
-- Pull-to-refresh 지원
+### 2. 타임라인
+- 전체 기록 최신순 + 날짜 그룹, 기분 필터 칩
+- 초기 6개월 로드, `loadMore()`로 6개월씩 확장 (앱 시작일 2026-01-01 고정)
 
-### 3. 통계 탭
-- `fl_chart` 기반 기분 분포 막대 차트
-- 시간대별 방문 횟수 수평 막대 차트
+### 3. 통계
+- 기분 분포 막대 차트, 시간대별 방문 수 수평 막대 차트
 - 기간 선택: 이번 달 / 최근 30일 / 최근 3개월 / 직접 지정
+- 하단 고정 배너 광고
+
+### 4. 더보기
+- 다크모드 설정, 피드백 보내기, 오픈소스 라이선스, 앱 버전
+- 데이터 초기화 (확인 다이얼로그 후 전체 삭제 → 캘린더 탭 이동)
 
 ---
 
 ## 데이터 모델
 
-### `Entries` 테이블 (SQLite)
+### `Entries` 테이블 (SQLite, Drift ORM)
 
 | 컬럼 | 타입 | 설명 |
 |------|------|------|
 | `id` | INTEGER PK | 자동 증가 |
 | `recordedAt` | DATETIME | 사용자가 지정한 시간 |
-| `visited` | BOOLEAN? | 방문 여부 (null = 미입력) |
+| `visited` | BOOLEAN? | null=미입력, false=안 감, true=다녀옴 |
 | `mood` | INTEGER? | 0=좋음, 1=보통, 2=나쁨 |
-| `memo` | TEXT? | 메모 |
-| `createdAt` | DATETIME | 생성 시각 (자동) |
+| `memo` | TEXT? | 메모 (빈 문자열은 null로 저장) |
+| `createdAt` | DATETIME | 앱 저장 시각 (자동) |
 
 ### `MoodLevel` enum
 
@@ -111,82 +107,92 @@ lib/
 enum MoodLevel { good, okay, bad }  // index: 0, 1, 2
 ```
 
-색상·레이블은 `MoodLevelX` 확장(`entry_ext.dart`)에서 관리한다.
+`visited + mood` 조합 → 표시 색상·레이블 변환 로직은 `entry_ext.dart`의 `EntryX` 확장에 집중.
+
+### DB 메서드 (`AppDatabase`)
+
+| 메서드 | 설명 |
+|--------|------|
+| `getEntriesForDate(date)` | 특정 날짜 기록 오름차순 |
+| `getEntriesInRange(from, to)` | from 이상 to 미만 범위 |
+| `getEntriesForMonth(year, month)` | 월별 기록 `Map<DateTime, List<Entry>>` |
+| `insertEntry(companion)` | 신규 삽입, 생성된 id 반환 |
+| `updateEntry(companion)` | id 기준 전체 교체 |
+| `deleteEntry(id)` | 단건 삭제 |
+| `deleteAllEntries()` | 전체 삭제 |
 
 ---
 
 ## 상태 관리 (Riverpod)
 
+| Provider | 종류 | 역할 |
+|----------|------|------|
+| `appDatabaseProvider` | Provider | AppDatabase 싱글톤 |
+| `currentTabProvider` | StateProvider | 현재 선택된 탭 인덱스 |
+| `themeModeProvider` | StateProvider | 라이트·다크 테마 설정 |
+| `moodDisplayProvider` | StateProvider | 기분 표시 방식 (dot / face) |
+| `startWeekdaySundayProvider` | StateProvider | 캘린더 시작 요일 설정 |
+| `adsRemovedProvider` | StateProvider | 광고 제거 구매 여부 |
+| `purchaseNotifierProvider` | NotifierProvider | 인앱 결제 흐름 (buy / restore) |
+| `calendarFocusedMonthProvider` | StateProvider | 캘린더에서 보고 있는 월 |
+| `selectedDayProvider` | StateProvider | 캘린더에서 선택된 날짜 |
+| `monthlyEntriesProvider` | FutureProvider.family | 월별 기록 Map (캘린더 도트용) |
+| `timelineFilterProvider` | StateProvider | 타임라인 기분 필터 |
+| `timelineProvider` | AsyncNotifier | 필터링·그룹화된 기록 목록 |
+| `recordFormProvider` | NotifierProvider.family | 기록 입력·수정 폼 상태 |
+| `statsRangeProvider` | StateProvider | 통계 기간 설정 |
+| `statsResultProvider` | FutureProvider | 통계 집계 결과 |
+
+### 기록 저장 후 갱신 흐름
+
 ```
-calendarFocusedMonthProvider   현재 보고 있는 달
-selectedDayProvider            캘린더에서 선택된 날
-monthlyEntriesProvider         해당 달의 기록 Map<DateTime, List<Entry>>
-
-timelineFilterProvider         타임라인 필터 (전체/기분별)
-timelineProvider               필터링·그룹화된 DayGroup 리스트
-
-recordFormProvider             기록 입력·수정 폼 상태
-
-statsRangeProvider             통계 조회 기간 설정
-statsResultProvider            집계 결과 (방문 수·기분 분포·시간대)
-```
-
-### 데이터 흐름
-
-```
-RecordScreen에서 저장
-    → DB insert / update
-    → monthlyEntriesProvider invalidate  →  캘린더 자동 갱신
-    → timelineProvider invalidate        →  타임라인 자동 갱신
-```
-
----
-
-## 확장 구조 (`entry_ext.dart`)
-
-여러 위젯에서 중복되던 변환 로직을 단일 파일에 통합했다.
-
-```dart
-// MoodLevel 확장
-MoodLevel.good.color   // AppTheme.moodGood
-MoodLevel.good.label   // '좋음'
-
-// Entry 확장
-entry.moodColor        // visited·mood 조합 → 표시 색상
-entry.moodLabel        // visited·mood 조합 → 표시 텍스트
-entry.timeStr          // recordedAt → "HH:mm"
+RecordScreen 저장
+  → DB insert / update
+  → monthlyEntriesProvider invalidate  →  캘린더 갱신
+  → timelineProvider invalidate        →  타임라인 갱신
+  → statsResultProvider invalidate     →  통계 갱신
+  → HomeWidgetService.update()         →  홈 화면 위젯 갱신
 ```
 
 ---
 
-## 테마 색상 (`app_theme.dart`)
+## Android 홈 화면 위젯
+
+| 크기 | 표시 정보 |
+|------|-----------|
+| 1×1 (57×57dp~) | 오늘 방문 횟수 + + 버튼 |
+| 2×1 (120×57dp~) | 오늘 방문 횟수 + 마지막 시각 + + 버튼 |
+| 2×2 (120×120dp~) | 오늘 방문 횟수 + 마지막 시각 + 마지막 기분 + 오늘 기분 도트 + + 버튼 |
+
+**구현 파일 (Android):**
+- `widget/PooPooWidget.kt` — Glance `SizeMode.Responsive`로 3종 레이아웃 분기
+- `widget/PooPooWidgetReceiver.kt` — `HomeWidgetGlanceWidgetReceiver` 확장, 자정 리셋 AlarmManager
+- `widget/WidgetDataStore.kt` — `"HomeWidgetPreferences"` SharedPreferences 읽기
+- `widget/BootReceiver.kt` — `BOOT_COMPLETED` 수신 시 위젯 갱신 + 알람 재등록
+- `res/xml/poopoo_widget_info.xml` — 위젯 메타데이터 (updatePeriodMillis=1800000)
+
+**데이터 흐름:**
+```
+기록 저장 → HomeWidgetService → home_widget SharedPreferences 저장
+         → HomeWidget.updateWidget() → PooPooWidgetReceiver.onUpdate()
+         → PooPooWidget.provideGlance() → currentState().preferences 읽기 → UI 갱신
+```
+
+---
+
+## 테마 색상
 
 | 상수 | 색상 | 용도 |
 |------|------|------|
-| `moodGood` | `#639922` (녹색) | 좋음 |
-| `moodOkay` | `#BA7517` (주황) | 보통 |
-| `moodBad` | `#E24B4A` (빨강) | 나쁨 |
-| `moodNone` | `#B4B2A9` (회색) | 안 감 / 미입력 |
-| `primaryBlue` | `#185FA5` | 주 색상 |
+| `AppTheme.moodGood` | `#639922` (녹색) | 좋음 |
+| `AppTheme.moodOkay` | `#BA7517` (주황) | 보통 |
+| `AppTheme.moodBad` | `#E24B4A` (빨강) | 나쁨 |
+| `AppTheme.moodNone` | `#B4B2A9` (회색) | 안 감 / 미입력 |
 
-Material 3 기반, 라이트·다크 테마 모두 지원.
+Material 3 `ColorScheme.fromSeed` 기반. 테마 모드는 `shared_preferences`에 저장.
 
 ---
 
-## 부가 기능
+## 한국어 지역화
 
-- **홈 위젯** (`home_widget_service.dart`): 홈 화면에 오늘 기록 요약 표시
-- **로컬 알림** (`notification_service.dart`): 기록 리마인더, 설정 화면 별도 제공
-- **한국어 지역화**: 캘린더, 날짜 포맷 전부 `ko_KR`
-
-
-fontSize	사용 횟수	주요 사용처
-7	1	mood_dot_row.dart — 무드 점 레이블
-10	1	settings_screen.dart
-11	5+	app_theme.dart, 캘린더, 타임라인, 통계
-12	6+	타임라인 카드, 캘린더, 기록, 설정, 알림설정
-13	9+	캘린더, 타임라인, 통계, 설정, 기록 (가장 넓게 쓰임)
-14	3	타임라인 카드, 캘린더 시트, 기록
-15	3	타임라인, 기록
-16	4+	캘린더, 월 피커, 알림설정, 기록
-26	1	stats_screen.dart — 통계 주요 수치
+UI 텍스트와 날짜 포맷은 모두 `ko_KR`. `flutter_localizations` + `GlobalCupertinoLocalizations` 적용.

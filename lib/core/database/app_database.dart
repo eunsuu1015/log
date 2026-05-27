@@ -1,3 +1,7 @@
+// 앱의 단일 SQLite 데이터베이스 클래스. Drift ORM을 사용한다.
+// Entries 테이블 CRUD, 월별 조회, 범위 조회, Upsert, 도메인 모델 변환 확장을 제공한다.
+// 코드 생성 결과(app_database.g.dart)는 build_runner로 생성하며 직접 수정하지 않는다.
+
 import 'dart:developer' as developer;
 import 'dart:io';
 
@@ -32,6 +36,8 @@ class Entries extends Table {
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
+  AppDatabase.forTesting(super.e);
+
   @override
   int get schemaVersion => 1;
 
@@ -43,15 +49,7 @@ class AppDatabase extends _$AppDatabase {
   /// 캘린더 날짜 선택 시 해당 날 기록 목록 표시에 사용된다.
   Future<List<Entry>> getEntriesForDate(DateTime date) {
     final start = DateTime(date.year, date.month, date.day);
-    final end = start.add(const Duration(days: 1));
-    return (select(entries)
-          ..where(
-            (e) =>
-                e.recordedAt.isBiggerOrEqualValue(start) &
-                e.recordedAt.isSmallerThanValue(end),
-          )
-          ..orderBy([(e) => OrderingTerm.asc(e.recordedAt)]))
-        .get();
+    return getEntriesInRange(start, start.add(const Duration(days: 1)));
   }
 
   /// [from] 이상 [to] 미만 범위의 기록을 오름차순으로 반환.
@@ -89,12 +87,11 @@ class AppDatabase extends _$AppDatabase {
   }
 
   /// 새 기록을 삽입하고 생성된 id를 반환한다.
-  //TODO: 나중에 오류 처리 제대로 하기. 로그 출력
   Future<int> insertEntry(EntriesCompanion companion) async {
     try {
       return await into(entries).insert(companion);
     } catch (e, s) {
-      developer.log('에러 발생', name: 'ERROR');
+      developer.log('insertEntry 실패', name: 'AppDatabase', error: e, stackTrace: s);
       rethrow;
     }
   }
@@ -104,6 +101,7 @@ class AppDatabase extends _$AppDatabase {
     try {
       return await update(entries).replace(companion);
     } catch (e, s) {
+      developer.log('updateEntry 실패', name: 'AppDatabase', error: e, stackTrace: s);
       rethrow;
     }
   }
@@ -113,9 +111,50 @@ class AppDatabase extends _$AppDatabase {
     try {
       return await (delete(entries)..where((e) => e.id.equals(id))).go();
     } catch (e, s) {
-      print(s.toString());
+      developer.log('deleteEntry 실패', name: 'AppDatabase', error: e, stackTrace: s);
       rethrow;
     }
+  }
+
+  /// entries 테이블을 DROP 후 재생성하여 모든 데이터와 auto-increment 카운터를 초기화한다.
+  Future<void> deleteAllEntries() async {
+    await customStatement('DROP TABLE IF EXISTS "entries"');
+    await createMigrator().createTable(entries);
+  }
+
+  /// recordedAt이 동일한 기록이 있으면 해당 행을 덮어쓰고, 없으면 새로 삽입한다.
+  /// CSV 가져오기처럼 중복 없는 upsert가 필요할 때 사용한다.
+  Future<void> upsertEntryByTime(EntriesCompanion companion) async {
+    try {
+      final existing = await (select(entries)
+            ..where(
+              (e) => e.recordedAt.equals(companion.recordedAt.value),
+            ))
+          .getSingleOrNull();
+      if (existing != null) {
+        await (update(entries)..where((e) => e.id.equals(existing.id)))
+            .write(companion);
+      } else {
+        await into(entries).insert(companion);
+      }
+    } catch (e, s) {
+      developer.log(
+        'upsertEntryByTime 실패',
+        name: 'AppDatabase',
+        error: e,
+        stackTrace: s,
+      );
+      rethrow;
+    }
+  }
+
+  /// 가장 오래된 기록의 날짜를 반환한다. 기록이 없으면 null.
+  Future<DateTime?> getOldestEntryDate() {
+    return (select(entries)
+          ..orderBy([(e) => OrderingTerm.asc(e.recordedAt)])
+          ..limit(1))
+        .getSingleOrNull()
+        .then((e) => e?.recordedAt);
   }
 }
 

@@ -3,15 +3,18 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:poopoolog/core/ads/native_ad_widget.dart';
 import 'package:poopoolog/features/timeline/timeline_provider.dart';
 import 'package:poopoolog/features/timeline/widgets/date_header.dart';
 import 'package:poopoolog/features/timeline/widgets/filter_chip_row.dart';
 import 'package:poopoolog/shared/widgets/entry_card.dart';
 
+
 import '../../core/database/app_database.dart';
 import '../../shared/theme/app_theme.dart';
 import '../calendar/calendar_provider.dart';
 import '../record/record_screen.dart';
+import '../stats/stats_provider.dart';
 
 /// 타임라인 탭 루트 위젯. 필터 침 + 기록 리스트로 구성된다.
 class TimelineScreen extends ConsumerWidget {
@@ -20,47 +23,64 @@ class TimelineScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final timelineAsync = ref.watch(timelineProvider);
+    final earliestAsync = ref.watch(earliestEntryDateProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('기록', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)
-        ,),
-          bottom: const PreferredSize(preferredSize: Size.fromHeight(48), child: FilterChipRow()
-    ),
-        ),
-      body: timelineAsync.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Center(child: Text('오류: $e'),),
-          data: (groups) => groups.isEmpty
-            ? _EmptyState(
-            hasFilter: ref.watch(timelineFilterProvider) != TimelineFilter.all,
-          )
-            : RefreshIndicator(onRefresh: () async => ref.invalidate(timelineProvider), child: _TimelineList(groups: groups, onEntryTap: (entry) => _openEdit(context, ref, entry),
+      appBar: AppBar(
+        title: const Text('타임라인'),
+      ),
+      body: Column(
+        children: [
+          const FilterChipRow(),
+          Expanded(
+            child: timelineAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Center(child: Text('오류: $e')),
+              data: (timelineState) {
+                if (timelineState.groups.isEmpty) {
+                  final hasFilter =
+                      ref.watch(timelineFilterProvider) != TimelineFilter.all;
+                  if (hasFilter) return const _EmptyState(hasFilter: true);
+                  return earliestAsync.when(
+                    data: (earliest) => earliest == null
+                        ? _TimelineNewUserEmptyState(
+                            onPressed: () => _openRecord(context, ref),
+                          )
+                        : const _EmptyState(hasFilter: false),
+                    loading: () =>
+                        const Center(child: CircularProgressIndicator()),
+                    error: (_, __) => const _EmptyState(hasFilter: false),
+                  );
+                }
+                return RefreshIndicator(
+                  onRefresh: () async {
+                    ref.invalidate(earliestEntryDateProvider);
+                    ref.invalidate(timelineProvider);
+                    await ref.read(timelineProvider.future);
+                  },
+                  child: _TimelineList(
+                    state: timelineState,
+                    onEntryTap: (entry) =>
+                        _openRecord(context, ref, entry: entry),
+                  ),
+                );
+              },
+            ),
           ),
-          ),
-          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton(
         heroTag: 'fab_timeline',
-        onPressed: () => _openNew(context, ref),
+        onPressed: () => _openRecord(context, ref),
         tooltip: '기록 추가',
         child: const Icon(Icons.add),
       ),
     );
   }
 
-
-  /// 신규 기록 입력 화면을 열고 닫힌 뒤 목록을 갱신한다.
-  void _openNew(BuildContext context, WidgetRef ref) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const RecordScreen(),
-        fullscreenDialog: true,
-      ),
-    ).then((_) => _refresh(ref));
-  }
-
-  /// 기존 기록 수정 화면을 열고 닫힌 뒤 목록을 갱신한다.
-  void _openEdit(BuildContext context, WidgetRef ref, Entry entry) {
+  /// 기록 생성(entry == null) 또는 수정(entry != null) 화면을 열고
+  /// 닫힌 뒤 목록을 갱신한다.
+  void _openRecord(BuildContext context, WidgetRef ref, {Entry? entry}) {
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -70,67 +90,138 @@ class TimelineScreen extends ConsumerWidget {
     ).then((_) => _refresh(ref));
   }
 
-  /// 타임라인·통계·캘린더 Provider를 모두 무효화해 데이터를 새로 로드한다.
+  /// 타임라인·통계·캘린더·최초기록일 Provider를 모두 무효화해 데이터를 새로 로드한다.
   void _refresh(WidgetRef ref) {
     ref.invalidate(timelineProvider);
-    // TODO: Stats provider 생성 후 주석 풀기
-    // ref.invalidate(statsResultProvider);
-    // 캘린더도 같이 갱신
+    ref.invalidate(statsResultProvider);
+    ref.invalidate(earliestEntryDateProvider);
     final month = ref.read(calendarFocusedMonthProvider);
     ref.invalidate(monthlyEntriesProvider(month));
   }
-
 }
 
 // ---------------------------------------------------------------------------
 // 타임라인 리스트
 // ---------------------------------------------------------------------------
 
-class _TimelineList extends StatelessWidget {
-  final List<DayGroup> groups;
+class _TimelineList extends ConsumerStatefulWidget {
+  final TimelineState state;
   final void Function(Entry) onEntryTap;
 
-  const _TimelineList({required this.groups, required this.onEntryTap});
+  const _TimelineList({required this.state, required this.onEntryTap});
+
+  @override
+  ConsumerState<_TimelineList> createState() => _TimelineListState();
+}
+
+class _TimelineListState extends ConsumerState<_TimelineList> {
+  final _scrollCtrl = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollCtrl.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollCtrl.removeListener(_onScroll);
+    _scrollCtrl.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollCtrl.position.pixels >=
+        _scrollCtrl.position.maxScrollExtent - 300) {
+      ref.read(timelineProvider.notifier).loadMore();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    // 날짜 헤더 + 항목을 플랫 리스트로 변환
     final items = <_ListItem>[];
-    for (final group in groups) {
+    int entryCount = 0;
+    for (final group in widget.state.groups) {
       items.add(_ListItem.header(group.date, group.entries.length));
       for (final entry in group.entries) {
         items.add(_ListItem.entry(entry));
+        entryCount++;
+        if (entryCount % 10 == 0) {
+          items.add(_ListItem.nativeAd());
+        }
       }
     }
 
-    // TODO: withOpacity deprecated -> withValue(alpha: )로 변경
-    final dividerColor = context.cs.outlineVariant.withValues(alpha: 0.5);
-    
+    final dividerColor = context.cs.outlineVariant.withValues(alpha: 0.25);
+    final hasMore = widget.state.hasMore;
+    final isLoadingMore = widget.state.isLoadingMore;
+
     return ListView.separated(
-        padding: const EdgeInsets.only(bottom: 100),
-        itemCount: items.length,
-        separatorBuilder: (_, i) {
-          // 헤더 앞이나 헤더 뒤에는 구분선 없음
-          final isCurrentHeader = items[i].isHeader;
-          final isNextHeader = items[i + 1].isHeader;
-          if (isCurrentHeader || isNextHeader) return const SizedBox.shrink();
+      controller: _scrollCtrl,
+      padding: const EdgeInsets.only(bottom: 100),
+      itemCount: items.length + 1, // +1 푸터
+      separatorBuilder: (_, i) {
+        if (i >= items.length - 1) return const SizedBox.shrink();
+        if (items[i + 1].isHeader) {
           return Divider(
             height: 1,
-            indent: 16,
-            endIndent: 16,
+            indent: 14,
+            endIndent: 14,
             color: dividerColor,
           );
-        },
-        itemBuilder: (_, i) {
-      final item = items[i];
-      if (item.isHeader) {
-        return DateHeader(date: item.date!, count: item.count!);
-      }
-      return EntryCard(entry: item.entry!, onTap: () => onEntryTap(item.entry!),
-      );
-    });
-  }
+        }
+        return const SizedBox.shrink();
+      },
+      itemBuilder: (_, i) {
+        // 푸터
+        if (i == items.length) {
+          if (isLoadingMore) {
+            return const Padding(
+              padding: EdgeInsets.symmetric(vertical: 20),
+              child: Center(child: CircularProgressIndicator()),
+            );
+          }
+          if (hasMore) {
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Center(
+                child: TextButton(
+                  onPressed: () {
+                    ref.read(timelineProvider.notifier).loadMore();
+                  },
+                  child: const Text('이전 기록 더 보기'),
+                ),
+              ),
+            );
+          }
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 20),
+            child: Center(
+              child: Text(
+                '모든 기록을 불러왔어요',
+                style: context.tt.bodySmall,
+              ),
+            ),
+          );
+        }
 
+        final item = items[i];
+        if (item.isHeader) {
+          return DateHeader(date: item.date!, count: item.count!);
+        }
+        if (item.isNativeAd) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            child: NativeAdWidget(),
+          );
+        }
+        return EntryCard(
+          entry: item.entry!,
+          onTap: () => widget.onEntryTap(item.entry!),
+        );
+      },
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -149,19 +240,73 @@ class _EmptyState extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(hasFilter ? Icons.filter_list_off : Icons.edit_note_outlined,
-          size: 48,
-              color: cs.outlineVariant,
-              ),
-          const SizedBox(height: 16,),
-          Text(hasFilter ? '해당 조건의 기록이 없어요' : '아직 기록이 없어요',
-          // TODO: style 추가
+          Icon(
+            hasFilter ? Icons.filter_list_off : Icons.edit_note_outlined,
+            size: 48,
+            color: cs.outlineVariant,
           ),
-          const SizedBox(height: 6,),
-          Text(hasFilter ? '필터를 변경해보세요' : '오른쪽 아래 + 버튼으로 첫 기록을 남겨보세요'
-          // TODO: style 추가
+          const SizedBox(height: 16),
+          Text(
+            hasFilter ? '해당 조건의 기록이 없어요' : '아직 기록이 없어요',
+            style: context.tt.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            hasFilter ? '필터를 변경해보세요' : '하단 + 버튼으로 첫 기록을 남겨보세요',
+            style: context.tt.titleSmall?.copyWith(
+              fontWeight: FontWeight.w400,
+              color: cs.onSurfaceVariant,
             ),
+          ),
         ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 최초 사용자 빈 상태 (기록 0건)
+// ---------------------------------------------------------------------------
+
+/// 앱을 처음 설치하고 기록이 전혀 없는 신규 유저에게 표시하는 온보딩 빈 상태.
+/// CTA 버튼을 누르면 기록 입력 화면으로 바로 이동한다.
+class _TimelineNewUserEmptyState extends StatelessWidget {
+  final VoidCallback onPressed;
+  const _TimelineNewUserEmptyState({required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = context.cs;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('🌱', style: TextStyle(fontSize: 52)),
+            const SizedBox(height: 20),
+            Text(
+              '아직 기록이 없어요',
+              style: context.tt.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '첫 번째 기록을 남겨보세요.\n작은 기록이 쌓여 소중한 데이터가 돼요.',
+              style: context.tt.titleSmall?.copyWith(
+                fontWeight: FontWeight.w400,
+                color: cs.onSurfaceVariant,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 28),
+            FilledButton.icon(
+              onPressed: onPressed,
+              icon: const Icon(Icons.add, size: 18),
+              label: const Text('첫 기록 남기기'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -172,16 +317,26 @@ class _EmptyState extends StatelessWidget {
 // ---------------------------------------------------------------------------
 class _ListItem {
   final bool isHeader;
+  final bool isNativeAd;
   final DateTime? date;
   final int? count;
   final Entry? entry;
 
   _ListItem.entry(this.entry)
-  : isHeader = false,
-  date = null,
-  count = null;
+    : isHeader = false,
+      isNativeAd = false,
+      date = null,
+      count = null;
 
   _ListItem.header(this.date, this.count)
-  : isHeader = true,
-  entry = null;
+    : isHeader = true,
+      isNativeAd = false,
+      entry = null;
+
+  _ListItem.nativeAd()
+    : isHeader = false,
+      isNativeAd = true,
+      date = null,
+      count = null,
+      entry = null;
 }
