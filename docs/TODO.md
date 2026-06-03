@@ -87,14 +87,9 @@
 ## 더보기
 
 - [x] **데이터 초기화 기능**: 확인 다이얼로그 후 전체 삭제 → 캘린더 탭으로 이동
-- [ ] **테마 기능 구현**: 기분 표시를 동그라미 색상 대신 이모티콘으로 전환하는 설정 추가
-  - 설정값 저장: `shared_preferences`
-  - 적용 범위: 캘린더 도트, 타임라인 카드, 통계 차트 등 기분 표시 전반
-  - 관련 파일:
-    - `lib/features/more/more_screen.dart` (설정 UI)
-    - `lib/core/extensions/entry_ext.dart` (기분 색상·레이블 확장)
-    - `lib/shared/widgets/entry_card.dart`
-    - `lib/features/calendar/widgets/mood_dot_row.dart`
+- [x] **기분 표시 방식 설정**: 색상 도트 / 얼굴 아이콘 전환 구현 완료
+  - `MoodDisplay` enum (`dot` / `face`), `moodDisplayProvider`, `MoodFacePainter`, `MoodIndicator` 구현
+  - 적용 범위: 캘린더 도트, 타임라인·캘린더 카드, 통계 범례, 기록 입력 선택기
 - [x] **데이터 내보내기**: CSV 내보내기 -> 가져오기 (Upsert 방식, 확인 다이얼로그 포함)
 - [x] 오픈소스 라이선스 추가 필요
 - [ ] 자동 등록 설정: +버튼 누르면 기본 값으로 자동 저장됨
@@ -108,7 +103,7 @@
   - Android: `android/local.properties`에 `admob.app.id=ca-app-pub-XXXXX~YYYYY` 추가
   - iOS: `ios/Flutter/Secrets.xcconfig`의 `ADMOB_APP_ID` 값 교체
 - [x] **전면 광고 빈도 조정**: 최초 10회 저장 시 첫 노출, 이후 7회마다 1회 (`ad_service.dart`)
-- [ ] **네이티브 광고 삽입 간격 조정**: 현재 7번째 엔트리마다 1개 (`timeline_screen.dart`)
+- [x] **네이티브 광고 삽입 간격 조정**: 10번째 엔트리마다 1개 (`timeline_screen.dart`, `entryCount % 10 == 0`)
 - [ ] **iOS SKAdNetworkIdentifier 목록 보완**: AdMob 공식 문서 기준 전체 목록으로 교체
 
 ---
@@ -117,7 +112,7 @@
 
 - [ ] **타임라인 리스트 디자인**: 시간 앞 vs 기분 앞. 선택 후 entry_card.dart 통일 적용
 - [x] **빈 상태 화면 개선**: 캘린더 타임라인 통계 각각 다른 빈 상태 일러스트/메시지로 교체. 첫 방문 사용자 온보딩 역할
-- [ ] **기록 입력 CupertinoDatePicker 미래 시간 차단 UX**: 미래 시간 선택 불가 처리가 되어있는데, 막히는 순간 사용자가 혼란스러울 수 있음. 토스트나 안내 문구 추가 
+- [x] **기록 입력 CupertinoDatePicker 미래 시간 차단 UX**: "오늘 이후 날짜는 선택할 수 없어요" 안내 문구 추가 완료
 
 ---
 
@@ -129,10 +124,10 @@
 - [x] `timeline_screen.dart` + `timeline_provider.dart` + 위젯 (`filter_chip_row`, `date_header`)
 - [x] `app_shell.dart`
 - [x] `more_screen.dart`
-- [ ] `calendar_provider.dart`
-- [ ] `entry_ext.dart` + `record_model.dart`
-- [ ] `shared/widgets/entry_card.dart`
-- [ ] 캘린더 위젯 (`mood_dot_row.dart`, `month_picker_sheet.dart`)
-- [ ] 통계 위젯 (`summary_card.dart`, `stat_heat_map_grid.dart`)
-- [ ] 테마 (`app_theme.dart`, `style.dart`)
-- [ ] 코어 (`main.dart`, `logger.dart`, `database_provider.dart`, `app_database.dart`)
+- [x] `calendar_provider.dart`
+- [x] `entry_ext.dart` + `record_model.dart`
+- [x] `shared/widgets/entry_card.dart`
+- [x] 캘린더 위젯 (`mood_dot_row.dart`, `month_picker_sheet.dart`)
+- [x] 통계 위젯 (`summary_card.dart`, `stat_heat_map_grid.dart`)
+- [x] 테마 (`app_theme.dart`, `style.dart`)
+- [x] 코어 (`main.dart`, `logger.dart`, `database_provider.dart`, `app_database.dart`)

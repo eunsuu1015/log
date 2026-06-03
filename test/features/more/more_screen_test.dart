@@ -106,7 +106,7 @@ void main() {
       expect(find.text('광고 없애기'), findsOneWidget);
       expect(find.text('₩2,900'), findsOneWidget);
       expect(find.text('구매 복원'), findsOneWidget);
-      expect(find.text('배너·전면·네이티브 광고를 영구적으로 제거해요'), findsOneWidget);
+      expect(find.text('앱 내 모든 광고를 영구적으로 제거해요'), findsOneWidget);
     });
 
     testWidgets('구매 완료: 완료 메시지 표시, 구매 버튼 없음', (tester) async {

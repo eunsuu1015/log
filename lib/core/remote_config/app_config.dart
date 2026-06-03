@@ -8,12 +8,14 @@ import 'dart:convert';
 // ---------------------------------------------------------------------------
 
 /// 공지사항 데이터. id가 빈 문자열이면 공지 없음으로 처리한다.
+/// show == 0이면 항상 노출, 1 이상이면 해당 횟수만큼만 노출한다.
 class NoticeConfig {
   final String id;
   final String title;
   final String message;
   final String noticeDate;
   final String createdAt;
+  final int show;
 
   const NoticeConfig({
     required this.id,
@@ -21,6 +23,7 @@ class NoticeConfig {
     required this.message,
     required this.noticeDate,
     required this.createdAt,
+    this.show = 0,
   });
 
   factory NoticeConfig.fromJson(Map<String, dynamic> json) => NoticeConfig(
@@ -29,24 +32,30 @@ class NoticeConfig {
         message: json['message'] as String? ?? '',
         noticeDate: json['notice_date'] as String? ?? '',
         createdAt: json['created_at'] as String? ?? '',
+        show: json['show'] as int? ?? 0,
       );
 
   bool get isEmpty => id.isEmpty;
 }
 
 /// 앱 업데이트 정보. latest_version과 현재 버전을 비교해 강제 업데이트 여부를 판단한다.
+/// show == 0이면 항상 노출, 1 이상이면 해당 횟수만큼만 노출한다.
+/// force_update == true이면 show 값과 무관하게 항상 노출한다.
 class UpdateConfig {
   final String latestVersion;
   final bool forceUpdate;
+  final int show;
 
   const UpdateConfig({
     required this.latestVersion,
     required this.forceUpdate,
+    this.show = 0,
   });
 
   factory UpdateConfig.fromJson(Map<String, dynamic> json) => UpdateConfig(
         latestVersion: json['latest_version'] as String? ?? '1.0.0',
         forceUpdate: json['force_update'] as bool? ?? false,
+        show: json['show'] as int? ?? 0,
       );
 
   /// currentVersion < latestVersion 이면 true (업데이트 필요).

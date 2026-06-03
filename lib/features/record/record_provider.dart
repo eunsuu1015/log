@@ -36,13 +36,13 @@ class RecordFormState {
     DateTime? recordedAt,
     Object? visited = _s,
     Object? mood = _s,
-    String? memo,
+    Object? memo = _s,
     bool? isSaving,
   }) => RecordFormState(
     recordedAt: recordedAt ?? this.recordedAt,
     visited: visited == _s ? this.visited : visited as bool?,
     mood: mood == _s ? this.mood : mood as MoodLevel?,
-    memo: memo ?? this.memo,
+    memo: memo == _s ? this.memo : memo as String?,
     isSaving: isSaving ?? this.isSaving,
   );
 }

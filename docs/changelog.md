@@ -2,6 +2,36 @@
 
 ---
 
+### [2026-06-02] 버그 수정 및 기능 개선
+
+- **변경 사항:**
+  - 메모 삭제 후 저장 시 반영 안 되는 버그 수정: `RecordFormState.copyWith`의 `memo` 파라미터를 sentinel 패턴(`Object? memo = _s`)으로 변경, `null` 명시 전달 시 기존 값을 유지하지 않고 `null`로 저장
+  - Android 홈 화면 위젯 색상 수정: `+` 버튼 색상을 앱 FAB과 동일한 `#2D6A4F`로, 기분 도트 fallback 색상을 앱 `moodNone`과 동일한 `#8CA896`으로 변경
+  - 기록 입력·수정 화면 메모 전체 삭제 버튼 추가: 메모 입력 필드에 텍스트가 있을 때 `suffixIcon`으로 X 버튼 표시, 탭 시 메모 즉시 초기화
+- **영향받는 파일:**
+  - 수정 - `lib/features/record/record_provider.dart` — `copyWith` memo sentinel 패턴 적용
+  - 수정 - `lib/features/record/record_screen.dart` — `_MemoField`에 `ValueListenableBuilder` + `suffixIcon` X 버튼 추가
+  - 수정 - `android/.../widget/PooPooWidget.kt` — `COLOR_PRIMARY`, `parseColor` fallback 색상 수정
+  - 신규 - `test/features/record/record_provider_test.dart` — `copyWith` sentinel 패턴 및 메모 null 저장 단위 테스트
+
+### [2026-06-01] Remote Config JSON `show` 필드 지원 — 팝업 노출 횟수 제어
+
+- **변경 사항:**
+  - Remote Config `app_config` JSON 구조 변경 대응: `notice`, `android`, `ios` 각 객체에 `show` 필드 추가
+  - `show == 0`: 항상 노출 (기존 동작과 동일)
+  - `show >= 1`: 해당 횟수만큼만 노출 후 더 이상 표시하지 않음 (SharedPreferences에 노출 횟수 카운트 저장)
+  - 공지사항: 사용자가 "다시 보지 않음" 선택 시 이후 완전히 노출 안 함 (기존 로직 유지)
+  - 업데이트 팝업: `force_update == true`이면 `show` 값 무관하게 항상 노출
+  - SharedPreferences 키 추가: `notice_show_count_{id}`, `update_show_count_{platform}_{version}`
+- **영향받는 파일:**
+  - 수정 - `lib/core/remote_config/app_config.dart` — `NoticeConfig`, `UpdateConfig`에 `show` 필드 추가 및 JSON 파싱
+  - 수정 - `lib/core/notice/notice.dart` — `kNoticeShowCountKeyPrefix`, `kUpdateShowCountKeyPrefix` 상수 추가
+  - 수정 - `lib/features/shell/app_shell.dart` — `_checkAndShowNotice()`, `_checkForceUpdate()`에 show 횟수 제어 로직 적용
+  - 수정 - `test/core/remote_config/app_config_test.dart` — `show` 파싱·기본값·fallback 테스트 추가
+  - 수정 - `test/features/update/update_test.dart` — `UpdateConfig.show` 기본값 테스트 추가
+- **특이사항 및 남은 작업:**
+  - 테스트 52개 전체 통과 확인
+
 ### [2026-05-27] 빌드 수정·버그 수정·전체 코드 리팩토링
 
 - **변경 사항:**

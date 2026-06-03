@@ -41,13 +41,18 @@ class _FakeUrlLauncher extends UrlLauncherPlatform {
 // ---------------------------------------------------------------------------
 Widget _wrap(Widget child) => MaterialApp(home: Scaffold(body: child));
 
-UpdateConfig _cfg(String latest) =>
-    UpdateConfig(latestVersion: latest, forceUpdate: false);
+UpdateConfig _cfg(String latest, {bool forceUpdate = false, int show = 0}) =>
+    UpdateConfig(latestVersion: latest, forceUpdate: forceUpdate, show: show);
 
 // ---------------------------------------------------------------------------
 // UpdateConfig.isOutdated() 단위 테스트
 // ---------------------------------------------------------------------------
 void main() {
+  group('UpdateConfig.show 기본값', () {
+    test('show 미지정 → 0', () => expect(_cfg('1.0.0').show, 0));
+    test('show=2 지정 → 2', () => expect(_cfg('1.0.0', show: 2).show, 2));
+  });
+
   group('UpdateConfig.isOutdated()', () {
     test('patch 버전 낮으면 true', () {
       expect(_cfg('0.1.1').isOutdated('0.1.0'), isTrue);

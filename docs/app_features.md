@@ -1,6 +1,6 @@
 # PooPooLog — 화면별 기능 명세
 
-> 폴더 구조·데이터 모델·Provider 목록은 [PROJECT.md](../PROJECT.md) 참고.
+> 폴더 구조·데이터 모델·Provider 목록은 [PROJECT.md](project.md) 참고.
 > 아키텍처·데이터 흐름 상세는 [architecture_analysis.md](architecture_analysis.md) 참고.
 
 ---
@@ -12,9 +12,10 @@
 3. [통계 탭](#3-통계-탭)
 4. [기록 입력·수정 화면](#4-기록-입력수정-화면)
 5. [더보기 탭](#5-더보기-탭)
-6. [광고 (AdMob)](#6-광고-admob)
-7. [Android 홈 화면 위젯](#7-android-홈-화면-위젯)
-8. [앱 시작 시 처리 (Remote Config)](#8-앱-시작-시-처리-remote-config)
+6. [온보딩](#6-온보딩)
+7. [광고 (AdMob)](#7-광고-admob)
+8. [Android 홈 화면 위젯](#8-android-홈-화면-위젯)
+9. [앱 시작 시 처리 (Remote Config)](#9-앱-시작-시-처리-remote-config)
 
 ---
 
@@ -62,9 +63,9 @@
 |------|------|
 | 전체 기록 | 최신순 정렬, 날짜별 그룹 |
 | 날짜 헤더 | 모든 날짜 `"m월 d일 (요일)"` 형식 통일. 오늘은 Primary 컬러 + 좌측 수직 바로 강조 |
-| 기분 필터 | 상단 칩 5개: 전체 / 좋음 / 보통 / 나쁨 / 안 감 |
+| 기분 필터 | 상단 칩 6개: 전체 / 좋음 / 보통 / 나쁨 / 다녀옴 / 안 감 |
 | 기록 카드 | 기분 도트, 기분 레이블, 메모(2줄 요약), 시간 표시 |
-| 네이티브 광고 | 7번째 엔트리마다 광고 카드 삽입 |
+| 네이티브 광고 | 누적 엔트리 수가 10의 배수인 위치에 광고 카드 삽입 |
 | Pull-to-refresh | 아래로 당겨 새로고침 |
 | 페이징 | 초기 최근 6개월 로드, 스크롤 끝에서 6개월씩 추가 |
 | 빈 상태 | 기록 없음 / 필터 결과 없음 각각 다른 안내 메시지 |
@@ -73,7 +74,7 @@
 
 | 위젯 | 역할 |
 |------|------|
-| `FilterChipRow` | 기분 필터 칩 5개, `timelineFilterProvider` 읽기·쓰기 |
+| `FilterChipRow` | 기분 필터 칩 6개, `timelineFilterProvider` 읽기·쓰기 |
 | `DateHeader` | 날짜 그룹 헤더, 오늘·어제 색상 강조 |
 | `EntryCard` (`shared/widgets/`) | 기분 도트, 레이블, 메모(2줄), 시간 표시 |
 
@@ -89,7 +90,7 @@
 |------|------|
 | 이번 달 | 1일 ~ 오늘 |
 | 최근 30일 | 오늘 기준 30일 전 ~ 오늘 |
-| 최근 3개월 | 이번 달 포함 3개월 |
+| 최근 90일 | 이번 달 포함 최근 3개월 |
 | 직접 지정 | `DateRangePicker`로 시작·종료일 선택 |
 
 ### 요약 카드
@@ -102,7 +103,7 @@
 | 차트 | 설명 |
 |------|------|
 | 기분 분포 도넛 차트 | 좋음·보통·나쁨 비율(%) 도넛. 우측에 기분별 횟수 범례 |
-| 시간대별 히트맵 그리드 | 0~23시 24칸, 6열×4행. 비율 기반 4단계 블루 계열 색상 (≤25%→연→진). 최다 방문 셀에 primary 테두리 강조. 헤더에 범례·"자세히 보기 ↑" 버튼 포함 |
+| 시간대별 히트맵 그리드 | 0~23시 24칸, 6열×4행. 비율 기반 4단계 초록 계열 색상 (≤25%→연→진). 최다 방문 셀에 primary 테두리 강조. 상단 피크 시간 요약 카드. 헤더에 범례·"자세히 보기 ↑" 버튼 포함 |
 
 #### 시간대 자세히 보기 (DraggableScrollableSheet)
 
@@ -129,18 +130,27 @@
 
 | 필드 | 위젯 | 설명 |
 |------|------|------|
-| 날짜·시간 | `CupertinoDatePicker` | iOS 드럼롤 휠, 미래 시간 불가 |
+| 날짜·시간 | `CupertinoDatePicker` | iOS 드럼롤 휠, 미래 시간 불가, 최소 2026-05-01 |
 | 방문 여부 | `SwitchListTile` | true/false 토글, null 없음, 초기값 true |
 | 기분 | 버튼 3개 | 좋음·보통·나쁨, 재탭하면 null (선택 해제) |
 | 메모 | `TextField` (4줄) | 자유 텍스트, 빈 문자열은 null로 저장 |
-| 빠른 태그 | `ActionChip` 6개 | 쾌변·설사·묽음·배아픔·잔변감·급했음 → 탭하면 메모에 추가 |
+| 빠른 태그 | `ActionChip` 13개 | 카테고리별(상태·증상·식사·기타) 분류. 탭하면 메모에 추가 |
+
+**빠른 태그 카테고리:**
+
+| 카테고리 | 태그 |
+|----------|------|
+| 상태 | 쾌변·설사·묽음·딱딱함 |
+| 증상 | 배아픔·잔변감·급했음·냄새 심함·냄새 없음 |
+| 식사 | 식후·공복 |
+| 기타 | 스트레스·운동 후 |
 
 ### 동작 규칙
 
 - `visited = false`로 변경 시 `mood` 자동 null 초기화
 - 기분 선택 시 `visited` 자동 true 설정
 - `presetDate` 전달 시 해당 날짜·현재 시각으로 초기화
-- 저장 완료 후 5회마다 전면 광고 노출
+- 저장 완료 후 전면 광고 노출 (최초 10회 저장 시 첫 노출, 이후 7회마다 1회)
 
 ### 수정 모드
 
@@ -159,12 +169,14 @@
 | 설정 | 다크모드 | 라이트 / 다크 / 기기 설정, `shared_preferences` 저장 |
 | 설정 | 기분 표시 방식 | `SegmentedButton` — 색상 도트 / 얼굴 아이콘 전환. `moodDisplayProvider` → `shared_preferences` 저장. 캘린더·타임라인·통계·기록 입력 전 화면 즉시 반영 |
 | 설정 | 주 시작 요일 | 달력 주 시작 요일 — 월요일 / 일요일. `startWeekdaySundayProvider` → `shared_preferences` 저장 |
-| 지원 | 피드백 보내기 | Google Forms 외부 링크 |
+| 지원 | 앱 가이드 | 온보딩 화면 재표시 (X 버튼으로 닫기, prefs 저장 없음) |
+| 지원 | 피드백 보내기 | Google Forms 외부 링크 (`FEEDBACK_URL` dart-define 주입) |
+| 정보 | 개인정보처리방침 | 외부 링크 (`PRIVACY_POLICY_URL` dart-define 주입) |
 | 정보 | 오픈소스 라이선스 | `showLicensePage` |
-| 정보 | 앱 버전 | 버전 표시 |
+| 정보 | 앱 버전 | 버전 표시 (5회 탭 시 테스트 데이터 생성 히든 기능) |
 | 데이터 | 내보내기 (CSV) | 전체 기록을 CSV로 내보내기 (`share_plus`) |
 | 데이터 | 가져오기 (CSV) | CSV 파일에서 기록 Upsert — 동일 `recordedAt` 있으면 덮어쓰고 없으면 추가. 확인 다이얼로그 포함. 헤더 컬럼명 기반 파싱으로 버전 호환 (`file_picker`) |
-| 데이터 | 데이터 초기화 | 확인 다이얼로그 후 전체 삭제 → 캘린더 탭으로 이동 |
+| 데이터 | 데이터 초기화 | 확인 다이얼로그 후 전체 삭제 → 선택 날짜·포커스 월 오늘 리셋 → 캘린더 탭으로 이동 |
 
 ### 히든 기능 — 테스트 데이터 생성
 
@@ -178,21 +190,39 @@
 
 ---
 
-## 6. 광고 (AdMob)
+## 6. 온보딩
+
+**파일** `lib/features/onboarding/onboarding_screen.dart`
+
+앱 최초 실행 시 3장 슬라이드 화면을 표시한다. 완료 또는 건너뛰기 시 `SharedPreferences`에 완료 여부를 저장해 이후 미표시.
+
+| 슬라이드 | 제목 | 내용 |
+|----------|------|------|
+| 1장 | 매일 기록하는 습관 | 기록 입력 카드 UI 미리보기 |
+| 2장 | 기분 흐름을 한눈에 | 미니 캘린더 그리드 + 기분 도트 미리보기 |
+| 3장 | 통계로 내 몸 이해 | 요약 카드 + 기분 도넛 차트 + 히트맵 미리보기 |
+
+- "건너뛰기" 버튼 → 즉시 홈 화면
+- "시작하기" 완료 → `kOnboardingSeenKey = true` 저장 후 홈 화면
+- 더보기 > "앱 가이드" → 언제든 다시 볼 수 있음 (prefs 저장 없이 X 버튼으로 닫기만)
+
+---
+
+## 7. 광고 (AdMob)
 
 > 현재 테스트 ID 사용 중. 출시 전 `lib/core/ads/ad_ids.dart`의 ID를 실제 AdMob ID로 교체 필요.
 > `AndroidManifest.xml`의 `APPLICATION_ID`, `ios/Runner/Info.plist`의 `GADApplicationIdentifier`도 함께 교체.
 
-| 광고 유형 | 위치 | 빈도         |
-|-----------|------|------------|
-| 전면 (Interstitial) | 기록 저장 완료 후 | 7회 저장마다 1회 |
-| 배너 (Banner) | 통계 화면 하단 | 항상 표시      |
-| 네이티브 (Native) | 타임라인 리스트 | 7번째 엔트리마다  |
+| 광고 유형 | 위치 | 빈도 |
+|-----------|------|------|
+| 전면 (Interstitial) | 기록 저장 완료 후 | 최초 10회 저장 시 첫 노출, 이후 7회마다 1회 (`ad_save_count` SharedPreferences 카운트) |
+| 배너 (Banner) | 통계 화면 하단 | 항상 표시 |
+| 네이티브 (Native) | 타임라인 리스트 | 누적 엔트리 수가 10의 배수인 위치마다 삽입 |
 
 
 ---
 
-## 7. Android 홈 화면 위젯
+## 8. Android 홈 화면 위젯
 
 **파일** `android/.../widget/PooPooWidget.kt`, `lib/core/widget/home_widget_service.dart`
 
@@ -226,12 +256,13 @@
 - 방문 횟수: `fontSize=26sp`, bold (1×1) / `22sp` bold (2×1, 2×2)
 - 레이블: `fontSize=9~11sp`, onSurfaceVariant 색상
 - + 버튼: 원형 32dp, primary 색상 배경
-- 기분 도트: 원형 8dp, 기분 색상 (좋음 #639922 / 보통 #BA7517 / 나쁨 #E24B4A / 없음 #B4B2A9)
+- 기분 도트: 원형 8dp, 기분 색상 (좋음 #3DA06C / 보통 #CC7D30 / 나쁨 #C64848 / 없음 #8CA896) — 앱 AppTheme과 동일
+- + 버튼: 원형 32dp, #2D6A4F (AppColors.lightPrimary) 배경 — 앱 FAB과 동일
 - cornerRadius: 16dp
 
 ---
 
-## 8. 앱 시작 시 처리 (Remote Config)
+## 9. 앱 시작 시 처리 (Remote Config)
 
 **파일** `lib/core/remote_config/`, `lib/features/update/`, `lib/features/notice/`
 
@@ -257,30 +288,51 @@
     "title": "공지 제목",
     "message": "공지 내용",
     "notice_date": "2026-05-23",
-    "created_at": "2026-05-23"
+    "created_at": "2026-05-23",
+    "show": 1
   },
-  "update": {
+  "android": {
     "latest_version": "1.0.0",
-    "force_update": false
+    "force_update": false,
+    "show": 1
+  },
+  "ios": {
+    "latest_version": "1.0.0",
+    "force_update": false,
+    "show": 1
   }
 }
 ```
+
+`show` 값의 의미:
+
+| 값 | 동작 |
+|----|------|
+| `0` | 항상 노출 |
+| `1` 이상 | 해당 횟수만큼만 노출 (앱 실행마다 SharedPreferences에 카운트 저장) |
 
 ### 강제 업데이트
 
 | 조건 | 동작 |
 |------|------|
-| `force_update: true` + 현재 버전 < `latest_version` | 닫기 불가 팝업 표시 |
-| 팝업 내 확인 버튼 | 플랫폼별 스토어로 이동 (url_launcher) |
+| 현재 버전 ≥ `latest_version` | 팝업 미표시 |
+| 현재 버전 < `latest_version` + `force_update: false` + `show >= 1` + 노출 횟수 소진 | 팝업 미표시 |
+| 현재 버전 < `latest_version` + `force_update: false` | 확인(스토어 이동)/취소 선택 팝업 |
+| 현재 버전 < `latest_version` + `force_update: true` | `show` 무관하게 항상 닫기 불가 팝업 표시 |
 | Remote Config fetch 실패 | `AppConfig.fallback` 사용 (강제 업데이트 없음) |
 
 - 버전 형식: `major.minor.patch` (예: `1.0.0`)
-- 뒤로가기·다이얼로그 외부 탭 모두 차단 (`PopScope(canPop: false)`, `barrierDismissible: false`)
+- 강제 업데이트 시 뒤로가기·다이얼로그 외부 탭 모두 차단 (`PopScope(canPop: false)`, `barrierDismissible: false`)
+- 노출 횟수는 플랫폼+버전 조합 키(`update_show_count_{platform}_{version}`)로 저장, 버전이 바뀌면 새로 카운트
 
 ### 공지사항
 
 | 조건 | 동작 |
 |------|------|
 | `notice.id` 비어 있음 | 공지 없음, 팝업 미표시 |
-| 사용자가 '다시 보지 않음' 선택 | `SharedPreferences`에 id 저장, 이후 미표시 |
-| `id` 변경 시 | 다시 보지 않음 여부 무관하게 재표시 |
+| 사용자가 '다시 보지 않음' 선택 | `SharedPreferences`에 id 저장, 이후 완전히 미표시 |
+| `show >= 1` + 노출 횟수 소진 | 팝업 미표시 |
+| `show == 0` | 항상 노출 ('다시 보지 않음' 선택 전까지) |
+| `id` 변경 시 | '다시 보지 않음' 및 노출 카운트 모두 새로 시작 |
+
+- 노출 횟수는 공지 ID 기반 키(`notice_show_count_{id}`)로 저장

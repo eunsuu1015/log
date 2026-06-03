@@ -37,7 +37,7 @@ import com.tistory.es1015.poopoolog.MainActivity
 private val SURFACE = Color(0xFFFFFBFE.toInt())
 private val COLOR_ON_SURFACE = ColorProvider(Color(0xFF1C1B1F.toInt()))
 private val COLOR_ON_SURFACE_VARIANT = ColorProvider(Color(0xFF49454F.toInt()))
-private val COLOR_PRIMARY = ColorProvider(Color(0xFF639922.toInt()))
+private val COLOR_PRIMARY = ColorProvider(Color(0xFF2D6A4F.toInt()))  // AppColors.lightPrimary
 private val COLOR_ON_PRIMARY = ColorProvider(Color(0xFFFFFFFF.toInt()))
 
 class PooPooWidget : GlanceAppWidget() {
@@ -84,7 +84,7 @@ private fun openRecordAction(context: Context) = actionStartActivity(
 private fun parseColor(hex: String): Color = try {
     Color(android.graphics.Color.parseColor(hex))
 } catch (e: Exception) {
-    Color(0xFFB4B2A9.toInt())
+    Color(0xFF8CA896.toInt())  // AppTheme.moodNone
 }
 
 // ── 레이아웃 1×1 ─────────────────────────────────────────────────────────────

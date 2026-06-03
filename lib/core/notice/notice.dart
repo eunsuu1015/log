@@ -4,6 +4,12 @@
 /// SharedPreferences 키 — 사용자가 '다시 보지 않음'을 선택한 공지 ID
 const kNoticeDismissedKey = 'notice_dismissed_id';
 
+/// SharedPreferences 키 접두사 — 공지 노출 횟수 (공지 ID 포함하여 완성)
+const kNoticeShowCountKeyPrefix = 'notice_show_count_';
+
+/// SharedPreferences 키 접두사 — 업데이트 팝업 노출 횟수 (플랫폼_버전 포함하여 완성)
+const kUpdateShowCountKeyPrefix = 'update_show_count_';
+
 /// 앱 공지사항 데이터 모델.
 class Notice {
   final String id;

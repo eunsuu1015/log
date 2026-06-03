@@ -85,18 +85,22 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
   void initState() {
     super.initState();
     ref.listenManual(purchaseNotifierProvider, (prev, next) {
-      if (next == IAPStatus.error && mounted) {
+      if (!mounted) return;
+      if (next == IAPStatus.error) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('구매를 처리하는 중 오류가 발생했어요. 다시 시도해 주세요.')),
         );
         ref.read(purchaseNotifierProvider.notifier).clearError();
+      } else if (next == IAPStatus.canceled) {
+        // 구매 취소 — 조용히 idle로 복귀 (스낵바 없음)
+        ref.read(purchaseNotifierProvider.notifier).clearCanceled();
       } else if (prev == IAPStatus.loading &&
           next == IAPStatus.idle &&
-          !ref.read(adsRemovedProvider) &&
-          mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('이전 구매 내역을 찾을 수 없어요.')));
+          !ref.read(adsRemovedProvider)) {
+        // restore() 완료 후 복원할 내역이 없는 경우
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('이전 구매 내역을 찾을 수 없어요.')),
+        );
       }
     });
   }
@@ -113,9 +117,9 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
     final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: cs.surfaceContainerLowest,
+      backgroundColor: cs.surfaceContainerLow.withValues(alpha: 0.7),
       appBar: AppBar(
-        backgroundColor: cs.surfaceContainerLowest,
+        backgroundColor: cs.surfaceContainerLow.withValues(alpha: 0.7),
         title: const Text('더보기'),
       ),
       body: ListView(
@@ -773,7 +777,10 @@ class _ListPickerSheet extends StatelessWidget {
             ListTile(
               title: Text(labels[i]),
               trailing: selectedIndex == i
-                  ? const Icon(Icons.check, color: Colors.blue)
+                  ? Icon(
+                      Icons.check,
+                      color: Theme.of(context).colorScheme.primary,
+                    )
                   : null,
               onTap: () {
                 onSelected(i);
@@ -896,7 +903,7 @@ class _RemoveAdsBanner extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 6),
-          Text('배너·전면·네이티브 광고를 영구적으로 제거해요', style: context.tt.bodySmall),
+          Text('앱 내 모든 광고를 영구적으로 제거해요', style: context.tt.bodySmall),
           const SizedBox(height: 6),
           GestureDetector(
             onTap: isLoading ? null : onRestore,
@@ -942,7 +949,7 @@ class _SectionCard extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     return Container(
       decoration: BoxDecoration(
-        color: cs.surfaceContainerLow,
+        color: cs.surfaceContainerLowest,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(

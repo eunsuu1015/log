@@ -60,16 +60,25 @@ class _AppShellState extends ConsumerState<AppShell> {
   }
 
   /// Remote Config에서 받은 플랫폼별 업데이트 정보로 버전을 비교한다.
-  /// latest_version이 현재보다 높으면 팝업을 표시한다.
-  /// force_update=true이면 닫기 차단 후 true 반환(이후 로직 중단),
+  /// latest_version이 현재보다 높을 때 show 횟수에 따라 팝업 표시 여부를 결정한다.
+  /// force_update=true이면 show 값 무관하게 항상 표시하며 닫기 차단 후 true 반환(이후 로직 중단),
   /// force_update=false이면 확인/취소 팝업 후 false 반환(앱 계속 이용 가능).
   Future<bool> _checkForceUpdate(AppConfig config) async {
     final update = Platform.isIOS ? config.ios : config.android;
+    final platform = Platform.isIOS ? 'ios' : 'android';
 
     final info = await PackageInfo.fromPlatform();
     final currentVersion = info.version;
 
     if (!update.isOutdated(currentVersion)) return false;
+
+    // force_update=false 이고 show >= 1인 경우 노출 횟수 확인
+    if (!update.forceUpdate && update.show >= 1) {
+      final prefs = await SharedPreferences.getInstance();
+      final key = '$kUpdateShowCountKeyPrefix${platform}_${update.latestVersion}';
+      final shownCount = prefs.getInt(key) ?? 0;
+      if (shownCount >= update.show) return false;
+    }
 
     if (mounted) {
       await showDialog<void>(
@@ -80,20 +89,39 @@ class _AppShellState extends ConsumerState<AppShell> {
           forceUpdate: update.forceUpdate,
         ),
       );
+
+      // 팝업을 실제로 표시한 경우 노출 횟수 증가 (force_update=false + show >= 1인 경우만)
+      if (!update.forceUpdate && update.show >= 1) {
+        final prefs = await SharedPreferences.getInstance();
+        final key = '$kUpdateShowCountKeyPrefix${platform}_${update.latestVersion}';
+        final shownCount = prefs.getInt(key) ?? 0;
+        await prefs.setInt(key, shownCount + 1);
+      }
     }
     return update.forceUpdate;
   }
 
-  /// Remote Config에서 받은 공지를 확인하고, 사용자가 아직 숨기지 않은 경우 팝업을 표시한다.
-  /// [kForceShowNotice]가 true이면 '다시 보지 않음' 여부를 무시하고 항상 표시한다.
+  /// Remote Config에서 받은 공지를 확인하고 팝업 표시 여부를 결정한다.
+  /// show == 0이면 항상 표시, show >= 1이면 해당 횟수만큼만 표시한다.
+  /// 사용자가 '다시 보지 않음'을 선택한 공지는 이후 노출하지 않는다.
+  /// [kForceShowNotice]가 true이면 모든 조건을 무시하고 항상 표시한다.
   Future<void> _checkAndShowNotice(AppConfig config) async {
     final noticeConfig = config.notice;
     if (noticeConfig.isEmpty) return;
 
     if (!kForceShowNotice) {
       final prefs = await SharedPreferences.getInstance();
+
+      // '다시 보지 않음' 선택 여부 확인
       final dismissedId = prefs.getString(kNoticeDismissedKey);
       if (dismissedId == noticeConfig.id) return;
+
+      // show >= 1인 경우 노출 횟수 확인
+      if (noticeConfig.show >= 1) {
+        final countKey = '$kNoticeShowCountKeyPrefix${noticeConfig.id}';
+        final shownCount = prefs.getInt(countKey) ?? 0;
+        if (shownCount >= noticeConfig.show) return;
+      }
     }
 
     final notice = Notice(
@@ -108,6 +136,14 @@ class _AppShellState extends ConsumerState<AppShell> {
         barrierDismissible: false,
         builder: (_) => NoticeDialog(notice: notice),
       );
+
+      // 팝업을 실제로 표시한 경우 노출 횟수 증가 (show >= 1인 경우만)
+      if (!kForceShowNotice && noticeConfig.show >= 1) {
+        final prefs = await SharedPreferences.getInstance();
+        final countKey = '$kNoticeShowCountKeyPrefix${noticeConfig.id}';
+        final shownCount = prefs.getInt(countKey) ?? 0;
+        await prefs.setInt(countKey, shownCount + 1);
+      }
     }
   }
 

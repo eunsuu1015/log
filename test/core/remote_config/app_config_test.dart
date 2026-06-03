@@ -17,15 +17,18 @@ void main() {
     "title": "서버 점검",
     "message": "오늘 오전 2시에 점검이 있습니다.",
     "notice_date": "2026-05-01",
-    "created_at": "2026-04-30"
+    "created_at": "2026-04-30",
+    "show": 2
   },
   "android": {
     "latest_version": "1.2.3",
-    "force_update": true
+    "force_update": true,
+    "show": 3
   },
   "ios": {
     "latest_version": "1.1.0",
-    "force_update": false
+    "force_update": false,
+    "show": 0
   }
 }
 ''';
@@ -38,12 +41,15 @@ void main() {
     test('notice.message 파싱', () => expect(config.notice.message, '오늘 오전 2시에 점검이 있습니다.'));
     test('notice.noticeDate 파싱', () => expect(config.notice.noticeDate, '2026-05-01'));
     test('notice.createdAt 파싱', () => expect(config.notice.createdAt, '2026-04-30'));
+    test('notice.show 파싱', () => expect(config.notice.show, 2));
 
     test('android.latestVersion 파싱', () => expect(config.android.latestVersion, '1.2.3'));
     test('android.forceUpdate = true 파싱', () => expect(config.android.forceUpdate, isTrue));
+    test('android.show 파싱', () => expect(config.android.show, 3));
 
     test('ios.latestVersion 파싱', () => expect(config.ios.latestVersion, '1.1.0'));
     test('ios.forceUpdate = false 파싱', () => expect(config.ios.forceUpdate, isFalse));
+    test('ios.show = 0 파싱', () => expect(config.ios.show, 0));
   });
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -73,13 +79,22 @@ void main() {
       expect(config.ios.latestVersion, '1.0.0');
     });
 
+    test('show 필드 누락 → 기본값 0', () {
+      final config = AppConfig.fromJsonString('{"notice":{"id":"n1"},"android":{},"ios":{}}');
+      expect(config.notice.show, 0);
+      expect(config.android.show, 0);
+      expect(config.ios.show, 0);
+    });
+
     test('빈 JSON 객체 → 모든 필드 기본값', () {
       final config = AppConfig.fromJsonString('{}');
       expect(config.notice.id, '');
       expect(config.android.latestVersion, '1.0.0');
       expect(config.android.forceUpdate, isFalse);
+      expect(config.android.show, 0);
       expect(config.ios.latestVersion, '1.0.0');
       expect(config.ios.forceUpdate, isFalse);
+      expect(config.ios.show, 0);
     });
   });
 
@@ -89,12 +104,12 @@ void main() {
 
   group('NoticeConfig.isEmpty', () {
     test('id가 빈 문자열이면 isEmpty = true', () {
-      const notice = NoticeConfig(id: '', title: '제목', message: '내용', noticeDate: '', createdAt: '');
+      const notice = NoticeConfig(id: '', title: '제목', message: '내용', noticeDate: '', createdAt: '', show: 0);
       expect(notice.isEmpty, isTrue);
     });
 
     test('id가 있으면 isEmpty = false', () {
-      const notice = NoticeConfig(id: 'n-1', title: '제목', message: '내용', noticeDate: '', createdAt: '');
+      const notice = NoticeConfig(id: 'n-1', title: '제목', message: '내용', noticeDate: '', createdAt: '', show: 1);
       expect(notice.isEmpty, isFalse);
     });
   });
@@ -108,6 +123,10 @@ void main() {
       expect(AppConfig.fallback.notice.isEmpty, isTrue);
     });
 
+    test('notice.show = 0', () {
+      expect(AppConfig.fallback.notice.show, 0);
+    });
+
     test('android.latestVersion = "0.1.0"', () {
       expect(AppConfig.fallback.android.latestVersion, '0.1.0');
     });
@@ -116,12 +135,20 @@ void main() {
       expect(AppConfig.fallback.android.forceUpdate, isFalse);
     });
 
+    test('android.show = 0', () {
+      expect(AppConfig.fallback.android.show, 0);
+    });
+
     test('ios.latestVersion = "0.1.0"', () {
       expect(AppConfig.fallback.ios.latestVersion, '0.1.0');
     });
 
     test('ios.forceUpdate = false', () {
       expect(AppConfig.fallback.ios.forceUpdate, isFalse);
+    });
+
+    test('ios.show = 0', () {
+      expect(AppConfig.fallback.ios.show, 0);
     });
   });
 

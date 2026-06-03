@@ -36,7 +36,7 @@ const _kPages = [
   _PageData(
     type: _SlideType.record,
     title: '간편하게 기록해요',
-    description: '화면 우하단 + 버튼 하나로\n방문 여부, 기분, 메모를 남길 수 있어요.',
+    description: '화면 하단 + 버튼으로\n방문 여부, 기분, 메모를 남길 수 있어요.',
   ),
   _PageData(
     type: _SlideType.calendar,
@@ -292,7 +292,9 @@ class _RecordPreview extends StatelessWidget {
             final color = m.color;
             return Expanded(
               child: Padding(
-                padding: EdgeInsets.only(right: i < MoodLevel.values.length - 1 ? 8 : 0),
+                padding: EdgeInsets.only(
+                  right: i < MoodLevel.values.length - 1 ? 8 : 0,
+                ),
                 child: Container(
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   decoration: BoxDecoration(
@@ -345,7 +347,10 @@ class _RecordPreview extends StatelessWidget {
           ),
           child: Text(
             '자유롭게 기록하세요',
-            style: TextStyle(color: cs.onSurfaceVariant.withValues(alpha: 0.5), fontSize: 12),
+            style: TextStyle(
+              color: cs.onSurfaceVariant.withValues(alpha: 0.5),
+              fontSize: 12,
+            ),
           ),
         ),
       ],
@@ -441,57 +446,60 @@ class _CalendarPreview extends StatelessWidget {
           const SizedBox(height: 6),
 
           // ── 날짜 + 도트 (3주 표시, rowHeight ≈ 50 축소) ────────────────
-          ...List.generate(3, (week) => SizedBox(
-            height: 44,
-            child: Row(
-              children: List.generate(7, (day) {
-                final date = week * 7 + day + 1;
-                final dotColor = _dotData[date];
-                final isSelected = date == _selectedDay;
+          ...List.generate(
+            3,
+            (week) => SizedBox(
+              height: 44,
+              child: Row(
+                children: List.generate(7, (day) {
+                  final date = week * 7 + day + 1;
+                  final dotColor = _dotData[date];
+                  final isSelected = date == _selectedDay;
 
-                return Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      // 날짜 숫자 (선택된 날은 primary 원)
-                      Container(
-                        width: 24,
-                        height: 24,
-                        alignment: Alignment.center,
-                        decoration: isSelected
-                            ? BoxDecoration(
-                                color: cs.primary,
-                                shape: BoxShape.circle,
-                              )
-                            : null,
-                        child: Text(
-                          '$date',
-                          style: tt.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 11,
-                            color: isSelected ? cs.onPrimary : cs.onSurface,
+                  return Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        // 날짜 숫자 (선택된 날은 primary 원)
+                        Container(
+                          width: 24,
+                          height: 24,
+                          alignment: Alignment.center,
+                          decoration: isSelected
+                              ? BoxDecoration(
+                                  color: cs.primary,
+                                  shape: BoxShape.circle,
+                                )
+                              : null,
+                          child: Text(
+                            '$date',
+                            style: tt.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 11,
+                              color: isSelected ? cs.onPrimary : cs.onSurface,
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 2),
-                      // 기분 도트
-                      if (dotColor != null && !isSelected)
-                        Container(
-                          width: 5,
-                          height: 5,
-                          decoration: BoxDecoration(
-                            color: dotColor,
-                            shape: BoxShape.circle,
-                          ),
-                        )
-                      else
-                        const SizedBox(height: 5),
-                    ],
-                  ),
-                );
-              }),
+                        const SizedBox(height: 2),
+                        // 기분 도트
+                        if (dotColor != null && !isSelected)
+                          Container(
+                            width: 5,
+                            height: 5,
+                            decoration: BoxDecoration(
+                              color: dotColor,
+                              shape: BoxShape.circle,
+                            ),
+                          )
+                        else
+                          const SizedBox(height: 5),
+                      ],
+                    ),
+                  );
+                }),
+              ),
             ),
-          )),
+          ),
 
           const SizedBox(height: 8),
 
@@ -532,8 +540,10 @@ class _LegendDot extends StatelessWidget {
           decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
         const SizedBox(width: 3),
-        Text(label,
-            style: TextStyle(fontSize: 10, color: context.cs.onSurfaceVariant)),
+        Text(
+          label,
+          style: TextStyle(fontSize: 10, color: context.cs.onSurfaceVariant),
+        ),
       ],
     );
   }
@@ -556,10 +566,30 @@ class _StatsPreview extends StatelessWidget {
 
   // 시간대별 히트맵 샘플 데이터
   static const _hourly = [
-    0, 0, 0, 0, 0, 0,
-    0, 2, 5, 3, 1, 1,
-    2, 3, 1, 0, 1, 2,
-    2, 4, 5, 3, 1, 0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    2,
+    5,
+    3,
+    1,
+    1,
+    2,
+    3,
+    1,
+    0,
+    1,
+    2,
+    2,
+    4,
+    5,
+    3,
+    1,
+    0,
   ];
 
   static Color _heatColor(int count, int maxCount, ColorScheme cs) {
@@ -606,12 +636,15 @@ class _StatsPreview extends StatelessWidget {
                         children: [
                           const Text('📅', style: TextStyle(fontSize: 20)),
                           const SizedBox(width: 10),
-                          Text('18일',
-                              style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: cs.onSurface,
-                                  height: 1)),
+                          Text(
+                            '18일',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: cs.onSurface,
+                              height: 1,
+                            ),
+                          ),
                         ],
                       ),
                       const SizedBox(height: 6),
@@ -650,12 +683,15 @@ class _StatsPreview extends StatelessWidget {
                         children: [
                           const Text('💩', style: TextStyle(fontSize: 20)),
                           const SizedBox(width: 10),
-                          Text('34회',
-                              style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: cs.onSurface,
-                                  height: 1)),
+                          Text(
+                            '34회',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: cs.onSurface,
+                              height: 1,
+                            ),
+                          ),
                         ],
                       ),
                       const SizedBox(height: 6),
@@ -670,8 +706,10 @@ class _StatsPreview extends StatelessWidget {
         const SizedBox(height: 16),
 
         // ── 기분 분포 (도넛 차트 + 범례) ─────────────────────────────────
-        Text('기분 분포',
-            style: tt.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+        Text(
+          '기분 분포',
+          style: tt.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+        ),
         const SizedBox(height: 8),
         SizedBox(
           height: 88,
@@ -742,13 +780,18 @@ class _StatsPreview extends StatelessWidget {
         // ── 히트맵 헤더 ──────────────────────────────────────────────────
         Row(
           children: [
-            Text('시간대별 방문',
-                style: tt.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+            Text(
+              '시간대별 방문',
+              style: tt.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+            ),
             const Spacer(),
-            Text('적음',
-                style: TextStyle(
-                    fontSize: 9,
-                    color: cs.onSurfaceVariant.withValues(alpha: 0.7))),
+            Text(
+              '적음',
+              style: TextStyle(
+                fontSize: 9,
+                color: cs.onSurfaceVariant.withValues(alpha: 0.7),
+              ),
+            ),
             const SizedBox(width: 2),
             _heatBox(cs.surfaceContainerHighest),
             _heatBox(_kHeat1),
@@ -756,10 +799,13 @@ class _StatsPreview extends StatelessWidget {
             _heatBox(_kHeat3),
             _heatBox(_kHeat4),
             const SizedBox(width: 2),
-            Text('많음',
-                style: TextStyle(
-                    fontSize: 9,
-                    color: cs.onSurfaceVariant.withValues(alpha: 0.7))),
+            Text(
+              '많음',
+              style: TextStyle(
+                fontSize: 9,
+                color: cs.onSurfaceVariant.withValues(alpha: 0.7),
+              ),
+            ),
           ],
         ),
         const SizedBox(height: 10),
@@ -788,10 +834,13 @@ class _StatsPreview extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 2),
-                Text('$h',
-                    style: TextStyle(
-                        fontSize: 9,
-                        color: cs.onSurfaceVariant.withValues(alpha: 0.65))),
+                Text(
+                  '$h',
+                  style: TextStyle(
+                    fontSize: 9,
+                    color: cs.onSurfaceVariant.withValues(alpha: 0.65),
+                  ),
+                ),
               ],
             );
           },
@@ -801,14 +850,14 @@ class _StatsPreview extends StatelessWidget {
   }
 
   static Widget _heatBox(Color color) => Container(
-        width: 10,
-        height: 10,
-        margin: const EdgeInsets.only(left: 2),
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(2),
-        ),
-      );
+    width: 10,
+    height: 10,
+    margin: const EdgeInsets.only(left: 2),
+    decoration: BoxDecoration(
+      color: color,
+      borderRadius: BorderRadius.circular(2),
+    ),
+  );
 }
 
 /// 기분 분포 범례 한 행 (색상 도트 + 레이블 + 횟수).

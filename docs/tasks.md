@@ -1,7 +1,7 @@
 # PooPooLog — Tasks
 
 > AI 협업 작업 현황 관리 파일. 작업 시작 전 반드시 확인할 것.
-> 마지막 갱신: 2026-05-24 (Firebase Remote Config·강제 업데이트·공지사항 팝업·홈 위젯·Remote Config 로그 추가)
+> 마지막 갱신: 2026-05-28 (단위 테스트 완료 반영, flutter analyze 0 이슈 달성)
 
 ---
 
@@ -120,7 +120,7 @@
 - [x] `entry_card.dart` — 기분 색상, 레이블, 메모, 시간 표시
 - [x] `new_user_empty_state.dart` — 기록 0건 신규 유저 빈 상태 위젯 (타임라인·통계 공용)
 - [ ] `entry_card.dart` 리팩토링 및 디자인 확정
-- [ ] 빈 상태 화면 일러스트·메시지 교체 (캘린더·타임라인·통계 각각)
+- [x] 빈 상태 화면 일러스트·메시지 교체 — `new_user_empty_state.dart` 공용 위젯 구현 (타임라인·통계 공용)
   - 첫 방문 사용자 온보딩 역할 겸용
 
 ### 온보딩 및 공지사항
@@ -131,9 +131,11 @@
   - `lib/features/shell/app_shell.dart` — `_checkAndShowNotice()` 연동
 - [x] 공지사항 팝업 배경 터치로 닫히지 않도록 처리 (`barrierDismissible: false`)
 - [x] `kForceShowNotice` 플래그 — `true`이면 '다시 보지 않음' 무시하고 항상 표시 (테스트용, 현재 `false`)
-- [ ] 공지사항 Firebase Remote Config 연동 — Remote Config `app_config.notice` 값으로 교체
-  - 현재: `lib/core/notice/notice.dart`의 `kCurrentNotice` 로컬 상수 사용
-  - 목표: fetch한 `AppConfig.notice`를 `_checkAndShowNotice()`에 전달
+- [x] 공지사항 Firebase Remote Config 연동 — `_checkAndShowNotice(config)`에서 `AppConfig.notice` 사용 중
+- [x] Remote Config JSON `show` 필드 지원 — 공지·업데이트 팝업 노출 횟수 제어
+  - `show == 0`: 항상 노출, `show >= 1`: 해당 횟수만큼만 노출 (SharedPreferences 카운트)
+  - 공지: "다시 보지 않음" 선택 시 이후 노출 안 함 (기존 로직 유지)
+  - 업데이트: `force_update == true`이면 `show` 무관하게 항상 노출
 
 ### Firebase Remote Config
 - [x] Remote Config `app_config` JSON 구조 확정 (notice + update 통합)
@@ -155,7 +157,8 @@
   - `GoogleService-Info.plist` (iOS) → `ios/Runner/` 경로에 배치
 - [ ] `force_update_dialog.dart`의 iOS App Store ID 교체 (출시 전)
   - `_kIosStoreUrl` 상수에 실제 App Store Connect ID 입력
-- [ ] 공지사항 Remote Config 연동 — `AppConfig.notice`로 팝업 표시 (온보딩 섹션 참고)
+- [x] 공지사항 Remote Config 연동 — `AppConfig.notice`로 팝업 표시 완료 (온보딩 섹션 참고)
+- [x] Remote Config JSON 구조 변경 대응 — `show` 필드 추가 및 노출 횟수 로직 구현
 
 ### Android 홈 화면 위젯
 - [x] `HomeWidgetService` 구현 (`lib/core/widget/home_widget_service.dart`)
@@ -192,9 +195,9 @@
 ## 3단계: 테스트 및 안정화
 
 ### 단위 테스트
-- [ ] `RecordModel` 변환 로직 테스트 (`record_model.dart`)
-- [ ] `EntryMapper` / `RecordModelMapper` 확장 테스트 (`entry_ext.dart`)
-- [ ] `StatsResult` 집계 로직 테스트 (`stats_provider.dart`)
+- [x] `RecordModel` 변환 로직 테스트 (`record_model.dart`) — copyWith sentinel 패턴·==·hashCode 12개
+- [x] `EntryMapper` / `RecordModelMapper` 확장 테스트 (`entry_ext.dart`) — EntryX·MoodLevelX 18개
+- [x] `StatsResult` 집계 로직 테스트 (`stats_provider.dart`) — fromEntries() 집계 21개
 - [ ] 타임라인 필터·그룹화 로직 테스트 (`timeline_provider.dart`)
 
 ### 통합 테스트
@@ -212,5 +215,5 @@
 - [ ] iOS App Store / Android Play Store 메타데이터 작성
 - [ ] 개인정보처리방침 URL 연결
 - [ ] 앱 아이콘 및 스플래시 스크린 최종 확인
-- [ ] `flutter analyze` 경고 0개 달성
+- [x] `flutter analyze` 경고 0개 달성
 - [ ] 릴리즈 빌드 테스트 (Android AAB, iOS IPA)

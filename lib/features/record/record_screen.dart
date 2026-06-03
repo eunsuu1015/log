@@ -419,26 +419,44 @@ class _MemoField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TextField(
-      style: const TextStyle(fontSize: 12),
-      controller: controller,
-      onChanged: onChanged,
-      maxLines: 4,
-      minLines: 1,
-      decoration: InputDecoration(
-        hintText: '자유롭게 기록하세요',
-        hintStyle: const TextStyle(color: Colors.grey, fontSize: 12),
-        filled: true,
-        fillColor: context.cs.surfaceContainerHighest.withValues(alpha: 0.5),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
-        ),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 14,
-          vertical: 12,
-        ),
-      ),
+    return ValueListenableBuilder<TextEditingValue>(
+      valueListenable: controller,
+      builder: (context, value, _) {
+        return TextField(
+          style: const TextStyle(fontSize: 12),
+          controller: controller,
+          onChanged: onChanged,
+          maxLines: 4,
+          minLines: 1,
+          decoration: InputDecoration(
+            hintText: '자유롭게 기록하세요',
+            hintStyle: const TextStyle(color: Colors.grey, fontSize: 12),
+            filled: true,
+            fillColor: context.cs.surfaceContainerHighest.withValues(alpha: 0.5),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 14,
+              vertical: 12,
+            ),
+            suffixIcon: value.text.isNotEmpty
+                ? IconButton(
+                    icon: Icon(
+                      Icons.close,
+                      size: 16,
+                      color: context.cs.onSurfaceVariant.withValues(alpha: 0.6),
+                    ),
+                    onPressed: () {
+                      controller.clear();
+                      onChanged('');
+                    },
+                  )
+                : null,
+          ),
+        );
+      },
     );
   }
 }

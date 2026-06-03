@@ -44,11 +44,11 @@ dart run build_runner build --delete-conflicting-outputs
 
 ## 프로젝트 문서
 
-| 파일 | 내용 |
-|------|------|
-| [PROJECT.md](PROJECT.md) | 폴더 구조, 데이터 모델, 상태 관리, 테마 색상 |
-| [docs/app_features.md](docs/app_features.md) | 화면별 기능 상세 명세 |
+| 파일                                                             | 내용 |
+|----------------------------------------------------------------|------|
+| [PROJECT.md](docs/project.md)                                  | 폴더 구조, 데이터 모델, 상태 관리, 테마 색상 |
+| [docs/app_features.md](docs/app_features.md)                   | 화면별 기능 상세 명세 |
 | [docs/architecture_analysis.md](docs/architecture_analysis.md) | 아키텍처, Provider 의존 관계, 데이터 흐름 |
-| [tasks.md](tasks.md) | AI 협업 작업 현황 (단계별 완료·미완료 추적) |
-| [docs/TODO.md](docs/TODO.md) | 미완성 작업 목록 |
-| [docs/CHANGELOG.md](docs/CHANGELOG.md) | 작업 변경 이력 |
+| [tasks.md](docs/tasks.md)                                      | AI 협업 작업 현황 (단계별 완료·미완료 추적) |
+| [docs/TODO.md](docs/TODO.md)                                   | 미완성 작업 목록 |
+| [docs/changelog.md](docs/changelog.md)                         | 작업 변경 이력 |

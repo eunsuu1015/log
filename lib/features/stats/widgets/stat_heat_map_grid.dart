@@ -74,16 +74,18 @@ class StatHeatMapGrid extends StatelessWidget {
     // useSafeArea: true 로 인해 DraggableScrollableSheet 비율은
     // (화면 높이 - 하단 OS 영역) 기준으로 계산해야 한다.
     final screenH = MediaQuery.sizeOf(context).height;
+    final topPad = MediaQuery.viewPaddingOf(context).top;
     final bottomPad = MediaQuery.viewPaddingOf(context).bottom;
-    final availableH = screenH - bottomPad;
+    final availableH = screenH - topPad - bottomPad;
 
     // 구성 요소별 높이 추정 (축소된 레이아웃 기준)
     const headerH = 56.0; // 헤더 Row + 패딩
     const dividerH = 1.0;
     const listTopH = 8.0;
     const groupLabelH = 29.0; // padding top 10 + text 16 + padding bottom 3
-    const barH = 20.0; // height 16 + padding bottom 4
-    const listBottomH = 36.0; // useSafeArea 가 OS 영역을 제외하므로 고정값 사용
+    const barH = 24.0; // height 16 + padding bottom 4
+    const listBottomH = 16.0; // ListView bottom padding (SafeArea 가 OS 영역 처리)
+    const listPadding = 32.0;
 
     const bufferH = 32.0; // 추정 오차 보정 여유분
 
@@ -94,9 +96,10 @@ class StatHeatMapGrid extends StatelessWidget {
         (groupCount * groupLabelH) +
         (barCount * barH) +
         listBottomH +
+        listPadding +
         bufferH;
 
-    return (contentH / availableH).clamp(0.60, 1.0);
+    return (contentH / availableH).clamp(0.40, 1.0);
   }
 
   /// 고정 높이 바텀시트로 시간대 상세 차트를 표시한다.
@@ -111,7 +114,7 @@ class StatHeatMapGrid extends StatelessWidget {
       builder: (_) => DraggableScrollableSheet(
         initialChildSize: size,
         minChildSize: size,
-        maxChildSize: size.clamp(0.60, 1.0),
+        maxChildSize: size,
         expand: false,
         builder: (_, ctrl) => _HourDetailSheet(
           hourlyCounts: hourlyCounts,
@@ -437,38 +440,41 @@ class _HourDetailSheet extends StatelessWidget {
         color: cs.surface,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      child: Column(
-        children: [
-          // 헤더
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 12, 4, 8),
-            child: Row(
-              children: [
-                Text(
-                  '시간대별 방문',
-                  style: context.tt.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
+      child: SafeArea(
+        top: false,
+        child: Column(
+          children: [
+            // 헤더
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 4, 8),
+              child: Row(
+                children: [
+                  Text(
+                    '시간대별 방문',
+                    style: context.tt.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
-                const Spacer(),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.pop(context),
-                  visualDensity: VisualDensity.compact,
-                ),
-              ],
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ],
+              ),
             ),
-          ),
-          const Divider(height: 1),
-          // 그룹별 바 차트 목록
-          Expanded(
-            child: ListView(
-              controller: scrollController,
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-              children: _buildBars(context, cs, maxCount, peakHours),
+            const Divider(height: 1),
+            // 그룹별 바 차트 목록
+            Expanded(
+              child: ListView(
+                controller: scrollController,
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                children: _buildBars(context, cs, maxCount, peakHours),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -4,7 +4,7 @@
 > 기준 문서: `app_features.md`, `tasks.md`
 
 
-> 배포 빌드 명령 및 secrets 설정은 [`RELEASE.md`](./RELEASE.md) 참고.
+> 배포 빌드 명령 및 secrets 설정은 [`RELEASE.md`](release.md) 참고.
 
 ---
 

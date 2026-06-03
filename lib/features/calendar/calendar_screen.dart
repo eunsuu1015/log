@@ -157,13 +157,17 @@ class CalendarScreen extends ConsumerWidget {
       // 시트 열기 전(빌드 외부)에 미리 세팅 -> initState/build 중 상태 변경 없음
       if (presetDate != null) {
         final now = DateTime.now();
+        final today = DateTime(now.year, now.month, now.day);
+        // 미래 날짜 선택 후 FAB 탭 시 날짜를 오늘로 대체
+        final effectiveDate =
+            presetDate.isAfter(today) ? today : presetDate;
         ref
             .read(recordFormProvider(null).notifier)
             .setRecordedAt(
               DateTime(
-                presetDate.year,
-                presetDate.month,
-                presetDate.day,
+                effectiveDate.year,
+                effectiveDate.month,
+                effectiveDate.day,
                 now.hour,
                 now.minute,
               ),

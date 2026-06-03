@@ -29,8 +29,9 @@
                             [업데이트 확인]
                             Remote Config fetch
                               ├─ 현재 버전 ≥ latest_version → 통과
-                              ├─ 낮음 + force=false → 확인/취소 팝업 → 통과
-                              └─ 낮음 + force=true  → 강제 팝업 → 이후 중단
+                              ├─ 낮음 + force=false + show 횟수 소진 → 통과
+                              ├─ 낮음 + force=false → 확인/취소 팝업 → 통과 (노출 횟수 +1)
+                              └─ 낮음 + force=true  → 강제 팝업 (show 무관) → 이후 중단
                                   │ 통과
                                   ▼
                             [홈 위젯 액션 감지]
@@ -40,8 +41,9 @@
                                   ▼
                             [공지사항 팝업]
                               ├─ notice.id 없음 → 스킵
-                              ├─ 이미 닫음 → 스킵
-                              └─ 새 공지 → 팝업 표시
+                              ├─ '다시 보지 않음' 선택한 id → 스킵
+                              ├─ show >= 1 + 노출 횟수 소진 → 스킵
+                              └─ 표시 조건 충족 → 팝업 표시 (노출 횟수 +1)
 ```
 
 ---
@@ -106,7 +108,7 @@
 ```
 [타임라인 화면]
     │
-    ├─ 필터 칩 탭 (전체 / 좋음 / 보통 / 나쁨 / 방문 / 안 감)
+    ├─ 필터 칩 탭 (전체 / 좋음 / 보통 / 나쁨 / 다녀옴 / 안 감)
     │     └─ timelineFilterProvider 변경 → 리스트 갱신
     │
     ├─ 리스트 스크롤 끝 도달
@@ -184,7 +186,7 @@
     │     ├─ 신규 → DB insert
     │     ├─ 수정 → DB update
     │     ├─ HomeWidgetService 갱신
-    │     ├─ AdService.onRecordSaved() → 5회마다 전면 광고
+    │     ├─ AdService.onRecordSaved() → 최초 10회 저장 후 첫 노출, 이후 7회마다 전면 광고
     │     └─ Navigator.pop()
     │
     ├─ 삭제 버튼 (수정 모드만)
@@ -244,6 +246,6 @@
           └─ 업데이트 버튼만 → 스토어 이동 (뒤로가기/닫기 불가)
 
 [공지사항 팝업]
-    ├─ 확인 버튼 → 팝업 닫힘 (다음 실행 시 다시 표시됨)
-    └─ 다시 보지 않음 → SharedPreferences에 notice.id 저장 → 팝업 닫힘
+    ├─ 확인 버튼 → 팝업 닫힘 (show 횟수 남아있으면 다음 실행 시 재표시)
+    └─ 다시 보지 않음 → SharedPreferences에 notice.id 저장 → 이후 완전히 미표시
 ```

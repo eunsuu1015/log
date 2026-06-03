@@ -4,7 +4,7 @@
 
 ```
 lib/
-├── main.dart                             # 앱 진입점, AdMob 초기화, 테마 로드
+├── main.dart                             # 앱 진입점, Firebase·AdMob 초기화, 스플래시→실제 앱 교체
 ├── core/
 │   ├── ads/
 │   │   ├── ad_ids.dart                   # 플랫폼별 광고 단위 ID (출시 전 실제 ID로 교체)
@@ -18,10 +18,15 @@ lib/
 │   ├── extensions/
 │   │   └── entry_ext.dart                # MoodLevelX · EntryX 확장 (색상·레이블·시간)
 │   ├── iap/
-│   │   └── iap_provider.dart             # adsRemovedProvider, PurchaseNotifier (인앱 결제)
+│   │   └── iap_provider.dart             # adsRemovedProvider, PurchaseNotifier (인앱 결제), IAPStatus (idle/loading/error/canceled)
 │   ├── models/
 │   │   ├── record_model.dart             # MoodLevel enum, RecordModel 값 객체
 │   │   └── mood_display_provider.dart    # MoodDisplay enum, moodDisplayProvider, loadMoodDisplay()
+│   ├── notice/
+│   │   └── notice.dart                   # Notice 모델, SharedPreferences 키 상수 (kNoticeDismissedKey, kNoticeShowCountKeyPrefix, kUpdateShowCountKeyPrefix)
+│   ├── remote_config/
+│   │   ├── app_config.dart               # AppConfig·NoticeConfig·UpdateConfig 모델, isOutdated()
+│   │   └── remote_config_service.dart    # Firebase Remote Config fetch 서비스
 │   ├── settings/
 │   │   └── display_settings.dart         # startWeekdaySundayProvider
 │   └── widget/
@@ -35,12 +40,10 @@ lib/
 │   │   └── widgets/
 │   │       ├── mood_dot_row.dart          # 날짜 셀 기분 도트 행
 │   │       └── month_picker_sheet.dart   # 연·월 빠른 선택 피커
-│   ├── timeline/
-│   │   ├── timeline_screen.dart
-│   │   ├── timeline_provider.dart
-│   │   └── widgets/
-│   │       ├── date_header.dart           # 날짜 그룹 헤더
-│   │       └── filter_chip_row.dart       # 기분 필터 칩 행
+│   ├── notice/
+│   │   └── notice_dialog.dart            # 공지사항 팝업 다이얼로그
+│   ├── onboarding/
+│   │   └── onboarding_screen.dart        # 최초 실행 온보딩 3장 슬라이드
 │   ├── record/
 │   │   ├── record_screen.dart
 │   │   └── record_provider.dart
@@ -49,17 +52,26 @@ lib/
 │   │   ├── stats_provider.dart
 │   │   └── widgets/
 │   │       ├── summary_card.dart          # 요약 카드 위젯
-│   │       └── stat_heat_map_grid.dart    # 시간대별 수평 막대 차트
+│   │       └── stat_heat_map_grid.dart    # 시간대별 히트맵 + 자세히 보기 바 차트
+│   ├── timeline/
+│   │   ├── timeline_screen.dart
+│   │   ├── timeline_provider.dart
+│   │   └── widgets/
+│   │       ├── date_header.dart           # 날짜 그룹 헤더
+│   │       └── filter_chip_row.dart       # 기분 필터 칩 행
+│   ├── update/
+│   │   └── force_update_dialog.dart      # 강제 업데이트 팝업 (닫기 불가)
 │   └── more/
 │       └── more_screen.dart
 ├── shared/
 │   ├── theme/
-│   │   ├── app_theme.dart                # 기분 색상 상수, 라이트·다크 테마
-│   │   └── style.dart                    # 공통 텍스트 스타일 상수
+│   │   ├── app_theme.dart                # 기분 색상 상수, 라이트·다크 테마 (수동 ColorScheme)
+│   │   └── style.dart                    # 공통 반지름·버튼·카드 스타일 상수
 │   └── widgets/
 │       ├── entry_card.dart               # 공용 기록 카드 위젯
 │       ├── mood_indicator.dart           # MoodIndicator — dot/face 전환 통합 위젯
-│       └── mood_face_painter.dart        # CustomPainter — 웃음/일자/찡그림 얼굴
+│       ├── mood_face_painter.dart        # CustomPainter — 웃음/일자/찡그림 얼굴
+│       └── new_user_empty_state.dart     # 신규 유저 빈 상태 공용 위젯
 └── utils/
     └── logger.dart                       # 디버그 로거
 ```
@@ -74,17 +86,20 @@ lib/
 - 헤더 탭 → 연·월 피커 (Cupertino 드럼롤)
 
 ### 2. 타임라인
-- 전체 기록 최신순 + 날짜 그룹, 기분 필터 칩
-- 초기 6개월 로드, `loadMore()`로 6개월씩 확장 (앱 시작일 2026-01-01 고정)
+- 전체 기록 최신순 + 날짜 그룹, 기분 필터 칩 6개 (전체/좋음/보통/나쁨/다녀옴/안 감)
+- 초기 6개월 로드, `loadMore()`로 6개월씩 확장 (앱 시작일 2026-05-01 고정)
+- 네이티브 광고: 누적 엔트리 수가 10의 배수인 위치마다 삽입
 
 ### 3. 통계
-- 기분 분포 막대 차트, 시간대별 방문 수 수평 막대 차트
-- 기간 선택: 이번 달 / 최근 30일 / 최근 3개월 / 직접 지정
+- 기분 분포 도넛 차트, 시간대별 방문 수 히트맵 그리드 (6×4) + 자세히 보기 바 차트
+- 기간 선택: 이번 달 / 최근 30일 / 최근 90일 / 직접 지정
 - 하단 고정 배너 광고
 
 ### 4. 더보기
-- 다크모드 설정, 피드백 보내기, 오픈소스 라이선스, 앱 버전
-- 데이터 초기화 (확인 다이얼로그 후 전체 삭제 → 캘린더 탭 이동)
+- 다크모드·기분 표시 방식·주 시작 요일 설정
+- 피드백 보내기, 개인정보처리방침, 오픈소스 라이선스, 앱 가이드
+- CSV 내보내기·가져오기, 데이터 초기화
+- 광고 없애기 인앱 결제 (₩2,900 일회성)
 
 ---
 
@@ -118,8 +133,10 @@ enum MoodLevel { good, okay, bad }  // index: 0, 1, 2
 | `getEntriesForMonth(year, month)` | 월별 기록 `Map<DateTime, List<Entry>>` |
 | `insertEntry(companion)` | 신규 삽입, 생성된 id 반환 |
 | `updateEntry(companion)` | id 기준 전체 교체 |
+| `upsertEntryByTime(companion)` | 동일 `recordedAt` 존재 시 UPDATE, 없으면 INSERT |
 | `deleteEntry(id)` | 단건 삭제 |
 | `deleteAllEntries()` | 전체 삭제 |
+| `getOldestEntryDate()` | 가장 오래된 기록의 `recordedAt` (없으면 null) |
 
 ---
 
@@ -134,6 +151,7 @@ enum MoodLevel { good, okay, bad }  // index: 0, 1, 2
 | `startWeekdaySundayProvider` | StateProvider | 캘린더 시작 요일 설정 |
 | `adsRemovedProvider` | StateProvider | 광고 제거 구매 여부 |
 | `purchaseNotifierProvider` | NotifierProvider | 인앱 결제 흐름 (buy / restore) |
+| `earliestEntryDateProvider` | FutureProvider | 가장 오래된 기록 날짜 (없으면 null) |
 | `calendarFocusedMonthProvider` | StateProvider | 캘린더에서 보고 있는 월 |
 | `selectedDayProvider` | StateProvider | 캘린더에서 선택된 날짜 |
 | `monthlyEntriesProvider` | FutureProvider.family | 월별 기록 Map (캘린더 도트용) |
@@ -184,12 +202,12 @@ RecordScreen 저장
 
 | 상수 | 색상 | 용도 |
 |------|------|------|
-| `AppTheme.moodGood` | `#639922` (녹색) | 좋음 |
-| `AppTheme.moodOkay` | `#BA7517` (주황) | 보통 |
-| `AppTheme.moodBad` | `#E24B4A` (빨강) | 나쁨 |
-| `AppTheme.moodNone` | `#B4B2A9` (회색) | 안 감 / 미입력 |
+| `AppTheme.moodGood` | `#3DA06C` (맑은 숲 초록) | 좋음 |
+| `AppTheme.moodOkay` | `#CC7D30` (따뜻한 앰버) | 보통 |
+| `AppTheme.moodBad` | `#C64848` (차분한 로즈 레드) | 나쁨 |
+| `AppTheme.moodNone` | `#8CA896` (그레이 그린 뉴트럴) | 안 감 / 미입력 |
 
-Material 3 `ColorScheme.fromSeed` 기반. 테마 모드는 `shared_preferences`에 저장.
+Material 3 기반 수동 `ColorScheme` 구성 (라이트 Primary `#2D6A4F` / 다크 `#74C19A`). 테마 모드는 `shared_preferences`에 저장.
 
 ---
 

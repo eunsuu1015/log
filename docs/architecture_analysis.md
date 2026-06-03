@@ -1,6 +1,6 @@
 # PooPooLog — 아키텍처 분석
 
-> 폴더 구조·Provider 목록은 [PROJECT.md](../PROJECT.md) 참고.
+> 폴더 구조·Provider 목록은 [PROJECT.md](project.md) 참고.
 > 화면별 기능 명세는 [app_features.md](app_features.md) 참고.
 
 ---
@@ -13,7 +13,8 @@
 4. [Provider 의존 관계](#4-provider-의존-관계)
 5. [화면별 데이터 흐름](#5-화면별-데이터-흐름)
 6. [서비스 레이어](#6-서비스-레이어)
-7. [전체 구조 요약](#7-전체-구조-요약)
+7. [로컬 저장소](#7-로컬-저장소)
+8. [전체 구조 요약](#8-전체-구조-요약)
 
 ---
 
@@ -21,19 +22,35 @@
 
 ```
 main()
+  ├─ Firebase.initializeApp()            # Firebase 초기화 (Remote Config 사전 준비)
   ├─ MobileAds.instance.initialize()     # AdMob 초기화
   ├─ AdService().preload()               # 전면 광고 미리 로드
-  ├─ SharedPreferences → 저장된 테마 로드
+  ├─ SharedPreferences → 테마·기분표시방식·시작요일·광고제거여부 로드
+  ├─ runApp(_SplashApp)                  # 초기화 완료까지 스플래시 최소 1초 표시
   └─ runApp(
        ProviderScope(
-         overrides: [themeModeProvider ← 저장된 테마]
-         child: PooPooLogApp → AppShell
+         overrides: [
+           themeModeProvider, moodDisplayProvider,
+           startWeekdaySundayProvider, adsRemovedProvider
+         ]
+         child: PooPooLogApp → (온보딩 또는 AppShell)
        )
      )
+
+AppShell.initState()
+  ├─ Remote Config fetch (app_config JSON)
+  ├─ 강제 업데이트 확인
+  │    ├─ force_update=true → show 무관, 항상 닫기 불가 팝업 → 이후 로직 중단
+  │    └─ force_update=false → show 횟수 체크 후 팝업 여부 결정 (노출 시 카운트 +1)
+  ├─ 홈 위젯 액션 확인 (MethodChannel: open_record)
+  └─ 공지사항 팝업 확인
+       ├─ '다시 보지 않음' 선택 이력 확인 (notice_dismissed_id)
+       └─ show 횟수 체크 후 팝업 여부 결정 (노출 시 카운트 +1)
 ```
 
-- AdMob 초기화를 `main()`에서 `await`으로 처리 → 광고 준비 후 앱 시작
-- 테마 모드는 `ProviderScope.overrides`로 초기값 주입
+- Firebase 초기화를 `main()`에서 `await`으로 처리 → AppShell에서 Remote Config 즉시 사용 가능
+- 초기화 완료 전 스플래시 표시 후 `runApp` 교체 방식으로 최소 1초 스플래시 보장
+- `ProviderScope.overrides`로 SharedPreferences 로드값 주입 → UI 깜빡임 방지
 
 ---
 
@@ -106,9 +123,16 @@ appDatabaseProvider (Provider<AppDatabase>)
         └─ recordFormProvider(Entry?)           NotifierProvider.family
                  └─ null → 신규 / Entry → 수정
 
-currentTabProvider       StateProvider<int>       탭 인덱스
-themeModeProvider        StateProvider<ThemeMode> 테마 (초기값 ProviderScope override)
-selectedDayProvider      StateProvider<DateTime?> 캘린더 선택 날짜
+currentTabProvider           StateProvider<int>          탭 인덱스
+themeModeProvider            StateProvider<ThemeMode>    테마 (초기값 ProviderScope override)
+moodDisplayProvider          StateProvider<MoodDisplay>  기분 표시 방식 (dot/face)
+startWeekdaySundayProvider   StateProvider<bool>         캘린더 시작 요일 (true=일요일)
+adsRemovedProvider           StateProvider<bool>         광고 제거 구매 여부
+purchaseNotifierProvider     NotifierProvider            인앱 결제 흐름 (buy/restore)
+calendarFocusedMonthProvider StateProvider<DateTime>     캘린더에서 보고 있는 월
+selectedDayProvider          StateProvider<DateTime?>    캘린더 선택 날짜
+timelineFilterProvider       StateProvider<TimelineFilter> 타임라인 기분 필터
+statsRangeProvider           StateProvider<StatsRange>   통계 기간 설정
 ```
 
 ### 기록 저장·수정·삭제 후 invalidate 패턴
@@ -162,8 +186,9 @@ DateHeader / EntryCard / NativeAdWidget
 ```
 
 - `TimelineFilter` 변경 → `timelineProvider` 재실행
-- 초기 로드 범위: 최근 6개월. `loadMore()` 호출마다 6개월씩 확장 (최대 앱 시작일 2026-01-01)
-- 네이티브 광고: 누적 엔트리 수 % 7 == 0 인 위치에 삽입
+- 초기 로드 범위: 최근 6개월. `loadMore()` 호출마다 6개월씩 확장 (최대 앱 시작일 2026-05-01)
+- 필터: `all / good / okay / bad / visited / notVisited` 6종
+- 네이티브 광고: 누적 엔트리 수 % 10 == 0 인 위치에 삽입 (광고 제거 구매 시 미삽입)
 
 ### 5-3. 통계 탭
 
@@ -241,29 +266,84 @@ CSV 가져오기:
 ### AdService (싱글톤)
 
 ```
-preload()           전면 광고 미리 로드 (앱 시작 시)
-onRecordSaved()     저장 카운트 +1, _kInterstitialFrequency(5)회마다 전면 광고 노출
-                    광고 닫힌 후 onComplete() 콜백 실행 → Navigator.pop()
+preload()              전면 광고 미리 로드 (앱 시작 시)
+onRecordSaved(adsRemoved)  저장 카운트 +1. adsRemoved=true이면 광고 건너뜀.
+                           count == 10 (최초) 또는 (count - 10) % 7 == 0 → 전면 광고 노출.
+                           광고 닫힌 후 onComplete() 콜백 실행 → Navigator.pop()
 ```
 
 - Riverpod Provider 없음, 순수 싱글톤 패턴
-- 카운트는 `SharedPreferences`의 `ad_save_count` 키로 저장
+- 카운트는 `SharedPreferences`의 `ad_save_count` 키로 영구 저장 (앱 재시작 후에도 누적)
+
+### RemoteConfigService
+
+```
+fetchAppConfig()    Firebase Remote Config에서 app_config JSON fetch.
+                    실패 시 AppConfig.fallback 반환 (앱 정상 동작 보장).
+                    네트워크 없을 때 캐시 사용, 캐시도 없으면 fallback.
+```
+
+### HomeWidgetService
+
+```
+update(db)          오늘 방문 횟수·마지막 시각·기분 레이블·색상·도트 목록 계산.
+                    home_widget SharedPreferences에 저장 후 Android 위젯 갱신.
+```
 
 ### AppTheme
 
 ```dart
-static Color moodGood = Color(0xFF639922)  // 녹색
-static Color moodOkay = Color(0xFFBA7517)  // 주황
-static Color moodBad  = Color(0xFFE24B4A)  // 빨강
-static Color moodNone = Color(0xFFB4B2A9)  // 회색
+static Color moodGood = Color(0xFF3DA06C)  // 맑은 숲 초록
+static Color moodOkay = Color(0xFFCC7D30)  // 따뜻한 앰버
+static Color moodBad  = Color(0xFFC64848)  // 차분한 로즈 레드
+static Color moodNone = Color(0xFF8CA896)  // 그레이 그린 뉴트럴
 
-static ThemeData light()  // Material 3, ColorScheme.fromSeed
-static ThemeData dark()
+static ThemeData light()  // Material 3, 수동 ColorScheme (Primary #2D6A4F)
+static ThemeData dark()   // 수동 ColorScheme (Primary #74C19A 밝은 민트 그린)
 ```
 
 ---
 
-## 7. 전체 구조 요약
+## 7. 로컬 저장소
+
+앱에서 사용하는 로컬 저장소는 **SharedPreferences**와 **SQLite(Drift)** 두 가지다.
+"무엇을 기록했는가"는 SQLite, "앱을 어떻게 설정했는가"는 SharedPreferences로 역할이 구분된다.
+
+### SharedPreferences — 앱 설정 및 상태 (키-값)
+
+앱 시작 시 `main.dart`에서 한꺼번에 읽어 각 Provider 초기값으로 주입하고, 이후 사용자 액션 또는 외부 이벤트 발생 시 그 시점에 저장한다.
+
+| 키 | 타입 | 저장 시점 |
+|----|------|----------|
+| `theme_mode` | int | 더보기 → 테마 선택 |
+| `mood_display` | String | 더보기 → 기분 표시 방식 변경 |
+| `start_weekday_sunday` | bool | 더보기 → 시작 요일 변경 |
+| `onboarding_seen` | bool | 온보딩 완료(시작하기 탭) |
+| `ads_removed` | bool | 광고 제거 구매/복원 완료 시 (purchaseStream 이벤트) |
+| `ad_save_count` | int | 기록 저장마다 +1 (AdService 전면 광고 빈도 카운트) |
+| `notice_dismissed_id` | String | 공지 팝업 → "다시 보지 않음" 탭 |
+| `notice_show_count_{id}` | int | 공지 팝업이 실제로 표시될 때마다 +1 |
+| `update_show_count_{platform}_{version}` | int | 업데이트 팝업이 실제로 표시될 때마다 +1 |
+
+> `ads_removed`는 구매 완료 시 저장되며, 환불 감지 로직은 없다.
+> 앱 재시작 후에도 광고 제거 상태가 유지되는 구조다.
+
+### SQLite (Drift) — 사용자 기록 데이터
+
+`Entries` 테이블에 사용자가 입력한 기록을 저장한다.
+저장·수정·삭제 완료 후 관련 Provider를 `invalidate`해 UI를 자동 갱신한다.
+
+| 액션 | 저장 시점 |
+|------|----------|
+| 기록 저장 | 기록 입력 화면 → 저장 버튼 탭 (`insertEntry`) |
+| 기록 수정 | 기록 수정 화면 → 저장 버튼 탭 (`updateEntry`) |
+| 기록 삭제 | 기록 화면 → 삭제 버튼 탭 (`deleteEntry`) |
+| 전체 초기화 | 더보기 → 데이터 초기화 확인 (`deleteAllEntries`) |
+| CSV 가져오기 | 더보기 → CSV 파일 선택 후 확인 (`upsertEntryByTime`) |
+
+---
+
+## 8. 전체 구조 요약
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -292,7 +372,9 @@ static ThemeData dark()
 ┌─────────────────────────────────────────────────────────────┐
 │  Service Layer                                              │
 │                                                             │
-│  AdService  (google_mobile_ads — 전면·배너·네이티브)         │
+│  AdService           (google_mobile_ads — 전면·배너·네이티브) │
+│  RemoteConfigService (firebase_remote_config — 강제 업데이트·공지) │
+│  HomeWidgetService   (home_widget — Android 홈 화면 위젯)   │
 └─────────────────────────────────────────────────────────────┘
           │ SQL
 ┌─────────────────────────────────────────────────────────────┐
