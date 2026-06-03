@@ -263,7 +263,7 @@ void main() {
   // ─────────────────────────────────────────────────────────────────────────
 
   group('미래 날짜', () {
-    testWidgets('미래 날짜 선택 → DayPanel 미표시', (tester) async {
+    testWidgets('미래 날짜 선택 → DayPanel 표시 + 빈 상태 UI', (tester) async {
       final db = _makeDb();
       final futureDate = DateTime.now().add(const Duration(days: 3));
       final container = ProviderContainer(overrides: [
@@ -279,8 +279,10 @@ void main() {
       await tester.pumpWidget(_buildScreen(container));
       await tester.pumpAndSettle();
 
-      // 미래 날짜는 DayPanel을 표시하지 않음 → 추가 버튼 없음
-      expect(find.text('추가'), findsNothing);
+      // 미래 날짜도 DayPanel 표시 (기록 없으면 빈 상태 UI)
+      expect(find.text('저장된 기록이 없어요'), findsOneWidget);
+      // DayPanel 헤더의 "추가" 버튼 표시
+      expect(find.text('추가'), findsOneWidget);
     });
   });
 

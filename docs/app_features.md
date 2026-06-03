@@ -224,41 +224,74 @@
 
 ## 8. Android 홈 화면 위젯
 
-**파일** `android/.../widget/PooPooWidget.kt`, `lib/core/widget/home_widget_service.dart`
+**파일**
 
-### 위젯 3종
+| 파일 | 역할 |
+|------|------|
+| `android/.../widget/PooPooWidget.kt` | Glance 기반 위젯 UI, 크기별 레이아웃 렌더링 |
+| `android/.../widget/PooPooWidgetReceiver.kt` | 위젯 브로드캐스트 수신 + 자정 알람 스케줄링 |
+| `android/.../widget/BootReceiver.kt` | 기기 재부팅 시 위젯 복구 + 알람 재등록 |
+| `android/.../widget/WidgetDataStore.kt` | SharedPreferences → `WidgetData` 파싱 |
+| `lib/core/widget/home_widget_service.dart` | Flutter → SharedPreferences 데이터 저장 + 위젯 갱신 요청 |
 
-| 크기 | dp | 표시 정보 |
-|------|----|-----------|
-| 1×1 | ~57×57 | 오늘 방문 횟수 + + 버튼 |
-| 2×1 | ~120×57 | 오늘 방문 횟수 + 마지막 시각 + + 버튼 |
-| 2×2 | ~120×120 | 오늘 방문 횟수 + 마지막 시각 + 마지막 기분 + 오늘 기분 도트 목록 + + 버튼 |
+### 크기별 레이아웃 (반응형)
+
+`SizeMode.Responsive`로 위젯 크기에 따라 자동 전환. 위젯 추가 피커에서 크기 선택 가능.
+
+| 크기 | 피커 라벨 | 기준 | 방문 있을 때 | 방문 없을 때 |
+|------|-----------|------|-------------|-------------|
+| 1×1 | 푸푸로그 1x1 | 57×57dp 이하 | 오늘 / **N회** / + | 오늘 / **안 감** / + |
+| 2×1 | 푸푸로그 2x1 | 가로 120dp 이상 | 오늘 / **N회** / 마지막 시각 + 기분도트 / + | 오늘 / **안 다녀왔어요** / + |
+| 2×2 | 푸푸로그 2x2 | 세로 120dp 이상 | 오늘 / **N회** / 전체 기록(시각+기분도트, 최대 4건) / + | 오늘 / **안 다녀왔어요** / + |
 
 ### 탭 액션
 
 | 탭 위치 | 동작 |
 |---------|------|
 | 위젯 본체 | 앱 열기 (캘린더 탭) |
-| + 버튼 | 기록 입력 화면 바로 열기 |
+| + 버튼 | `open_record: true` Extra → MainActivity 실행 → 기록 입력 화면 바로 열기 |
+
+### 데이터 흐름
+
+```
+Flutter 기록 저장·삭제
+    → HomeWidgetService.update()
+    → DB에서 오늘 기록 조회
+    → 4개 키 SharedPreferences에 저장
+        (visit_count, last_time, last_mood_color,
+         today_records)  ← "HH:mm|#COLOR,..." 형식
+    → HomeWidget.updateWidget() × 3개 receiver → UI 갱신
+```
+
+### SharedPreferences 키
+
+| 키 | 타입 | 설명 |
+|----|------|------|
+| `visit_count` | String(Int) | 오늘 방문(visited=true) 횟수 |
+| `last_time` | String | 마지막 방문 시각 "HH:mm". 방문 없으면 빈 문자열 |
+| `last_mood_color` | String | 마지막 방문 기분 색상 hex. 방문 없으면 빈 문자열 |
+| `today_records` | String | 오늘 방문 전체 목록 "HH:mm\|#COLOR,..." 형식. 방문 없으면 빈 문자열 |
 
 ### 갱신 트리거
 
 | 시점 | 처리 |
 |------|------|
-| 기록 저장·삭제 | `HomeWidgetService.update()` → `home_widget.updateWidget()` |
-| 자정 | `AlarmManager.setRepeating` (매일 00:00, 비정확 허용) |
-| 재부팅 | `BootReceiver` → `PooPooWidget.updateAll()` + 알람 재등록 |
+| 기록 저장·삭제 | `HomeWidgetService.update()` fire-and-forget |
+| 자정 | `AlarmManager.setRepeating` (매일 00:00) → `PooPooWidget.updateAll()` |
+| 재부팅 | `BootReceiver` → 위젯 전체 갱신 + 알람 재등록 |
 | 주기 fallback | `updatePeriodMillis="1800000"` (30분) |
 
 ### 디자인
 
-- 배경: `GlanceMaterialTheme` widgetBackground (라이트/다크 자동)
-- 방문 횟수: `fontSize=26sp`, bold (1×1) / `22sp` bold (2×1, 2×2)
-- 레이블: `fontSize=9~11sp`, onSurfaceVariant 색상
-- + 버튼: 원형 32dp, primary 색상 배경
-- 기분 도트: 원형 8dp, 기분 색상 (좋음 #3DA06C / 보통 #CC7D30 / 나쁨 #C64848 / 없음 #8CA896) — 앱 AppTheme과 동일
-- + 버튼: 원형 32dp, #2D6A4F (AppColors.lightPrimary) 배경 — 앱 FAB과 동일
-- cornerRadius: 16dp
+| 항목 | 값 |
+|------|-----|
+| 배경 | `#FFFBFE` (라이트 Surface, 다크 미지원) |
+| 모서리 | 16dp rounded |
+| "오늘" 레이블 | 9~10sp, onSurfaceVariant(`#49454F`) |
+| 방문 횟수 | 20sp bold (1×1) / 18sp bold (2×1) / 20sp bold (2×2) |
+| 시각·보조 텍스트 | 11sp, onSurfaceVariant(`#49454F`) |
+| + 버튼 | 원형 32dp, `#2D6A4F`(AppColors.lightPrimary) 배경 |
+| 기분 도트 | 원형 8dp, 기분 색상 (좋음 `#3DA06C` / 보통 `#CC7D30` / 나쁨 `#C64848` / 없음 `#8CA896`) |
 
 ---
 

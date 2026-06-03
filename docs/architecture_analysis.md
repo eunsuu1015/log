@@ -313,20 +313,25 @@ static ThemeData dark()   // 수동 ColorScheme (Primary #74C19A 밝은 민트 �
 
 앱 시작 시 `main.dart`에서 한꺼번에 읽어 각 Provider 초기값으로 주입하고, 이후 사용자 액션 또는 외부 이벤트 발생 시 그 시점에 저장한다.
 
-| 키 | 타입 | 저장 시점 |
+| 키 | 타입 | 관리 방법 |
 |----|------|----------|
-| `theme_mode` | int | 더보기 → 테마 선택 |
-| `mood_display` | String | 더보기 → 기분 표시 방식 변경 |
-| `start_weekday_sunday` | bool | 더보기 → 시작 요일 변경 |
-| `onboarding_seen` | bool | 온보딩 완료(시작하기 탭) |
-| `ads_removed` | bool | 광고 제거 구매/복원 완료 시 (purchaseStream 이벤트) |
-| `ad_save_count` | int | 기록 저장마다 +1 (AdService 전면 광고 빈도 카운트) |
-| `notice_dismissed_id` | String | 공지 팝업 → "다시 보지 않음" 탭 |
-| `notice_show_count_{id}` | int | 공지 팝업이 실제로 표시될 때마다 +1 |
-| `update_show_count_{platform}_{version}` | int | 업데이트 팝업이 실제로 표시될 때마다 +1 |
+| `theme_mode` | int | **저장**: 더보기 → 테마 선택 시 / **읽기**: 앱 시작 시 Provider 초기화 |
+| `mood_display` | String | **저장**: 더보기 → 기분 표시 방식 변경 시 / **읽기**: 앱 시작 시 Provider 초기화 |
+| `start_weekday_sunday` | bool | **저장**: 더보기 → 시작 요일 변경 시 / **읽기**: 앱 시작 시 Provider 초기화 |
+| `onboarding_seen` | bool | **저장**: 온보딩 완료(시작하기 탭) / **읽기**: 앱 시작 시 온보딩 표시 여부 판단 |
+| `ads_removed` | bool | **저장**: 구매·복원 완료 시(purchaseStream 이벤트) / **읽기**: 광고 표시 전 체크 |
+| `ad_save_count` | int | **저장**: 기록 저장마다 +1 / **읽기**: 전면 광고 빈도 판단 / **리셋**: 광고 노출 후 0으로 초기화 |
+| `notice_dismissed_id` | String | **저장**: 공지 팝업 → "다시 보지 않음" 탭 / **읽기**: 앱 시작 시 공지 표시 여부 판단 / **갱신**: 공지 ID 변경 시 자동 무효화(새 ID와 불일치) |
+| `notice_show_count` | int | **저장·갱신**: 공지 팝업 실제 표시 시 +1 / **리셋**: `notice_show_count_id`와 현재 ID 불일치 시 0으로 간주 (키 삭제 없이 논리적 리셋) |
+| `notice_show_count_id` | String | **저장·갱신**: 공지 팝업 표시 시 현재 공지 ID로 덮어쓰기 / **용도**: `notice_show_count` 리셋 기준 비교 |
+| `update_show_count` | int | **저장·갱신**: 업데이트 팝업 실제 표시 시 +1 / **리셋**: `update_show_count_id`와 현재 `{platform}_{version}` 불일치 시 0으로 간주 |
+| `update_show_count_id` | String | **저장·갱신**: 업데이트 팝업 표시 시 현재 `{platform}_{version}`으로 덮어쓰기 / **용도**: `update_show_count` 리셋 기준 비교 |
 
-> `ads_removed`는 구매 완료 시 저장되며, 환불 감지 로직은 없다.
-> 앱 재시작 후에도 광고 제거 상태가 유지되는 구조다.
+> **공지·업데이트 카운트 키는 고정 키 2개(카운트 + 기준 ID)로 관리한다.**
+> ID/버전이 바뀌면 기준 ID 불일치로 카운트를 0으로 간주해 논리적 리셋이 일어난다.
+> 키를 직접 삭제하거나 새 키를 추가하지 않으므로 SharedPreferences 항목이 누적되지 않는다.
+>
+> `ads_removed`는 구매 완료 시 저장되며, 환불 감지 로직은 없다. 앱 재시작 후에도 광고 제거 상태가 유지된다.
 
 ### SQLite (Drift) — 사용자 기록 데이터
 

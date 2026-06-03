@@ -73,29 +73,36 @@ class _AppShellState extends ConsumerState<AppShell> {
     if (!update.isOutdated(currentVersion)) return false;
 
     // force_update=false 이고 show >= 1인 경우 노출 횟수 확인
+    // 단일 고정 키로 관리하며, 플랫폼_버전 조합이 바뀌면 카운트를 0으로 리셋한다.
     if (!update.forceUpdate && update.show >= 1) {
       final prefs = await SharedPreferences.getInstance();
-      final key = '$kUpdateShowCountKeyPrefix${platform}_${update.latestVersion}';
-      final shownCount = prefs.getInt(key) ?? 0;
+      final currentId = '${platform}_${update.latestVersion}';
+      final savedId = prefs.getString(kUpdateShowCountIdKey);
+      final shownCount =
+          savedId == currentId ? (prefs.getInt(kUpdateShowCountKey) ?? 0) : 0;
       if (shownCount >= update.show) return false;
     }
 
     if (mounted) {
       await showDialog<void>(
         context: context,
-        barrierDismissible: !update.forceUpdate,
+        barrierDismissible: false,
         builder: (_) => UpdateDialog(
           latestVersion: update.latestVersion,
           forceUpdate: update.forceUpdate,
+          releaseNotes: update.releaseNotes,
         ),
       );
 
       // 팝업을 실제로 표시한 경우 노출 횟수 증가 (force_update=false + show >= 1인 경우만)
       if (!update.forceUpdate && update.show >= 1) {
         final prefs = await SharedPreferences.getInstance();
-        final key = '$kUpdateShowCountKeyPrefix${platform}_${update.latestVersion}';
-        final shownCount = prefs.getInt(key) ?? 0;
-        await prefs.setInt(key, shownCount + 1);
+        final currentId = '${platform}_${update.latestVersion}';
+        final savedId = prefs.getString(kUpdateShowCountIdKey);
+        final shownCount =
+            savedId == currentId ? (prefs.getInt(kUpdateShowCountKey) ?? 0) : 0;
+        await prefs.setString(kUpdateShowCountIdKey, currentId);
+        await prefs.setInt(kUpdateShowCountKey, shownCount + 1);
       }
     }
     return update.forceUpdate;
@@ -117,9 +124,12 @@ class _AppShellState extends ConsumerState<AppShell> {
       if (dismissedId == noticeConfig.id) return;
 
       // show >= 1인 경우 노출 횟수 확인
+      // 단일 고정 키로 관리하며, 공지 ID가 바뀌면 카운트를 0으로 리셋한다.
       if (noticeConfig.show >= 1) {
-        final countKey = '$kNoticeShowCountKeyPrefix${noticeConfig.id}';
-        final shownCount = prefs.getInt(countKey) ?? 0;
+        final savedId = prefs.getString(kNoticeShowCountIdKey);
+        final shownCount = savedId == noticeConfig.id
+            ? (prefs.getInt(kNoticeShowCountKey) ?? 0)
+            : 0;
         if (shownCount >= noticeConfig.show) return;
       }
     }
@@ -140,9 +150,12 @@ class _AppShellState extends ConsumerState<AppShell> {
       // 팝업을 실제로 표시한 경우 노출 횟수 증가 (show >= 1인 경우만)
       if (!kForceShowNotice && noticeConfig.show >= 1) {
         final prefs = await SharedPreferences.getInstance();
-        final countKey = '$kNoticeShowCountKeyPrefix${noticeConfig.id}';
-        final shownCount = prefs.getInt(countKey) ?? 0;
-        await prefs.setInt(countKey, shownCount + 1);
+        final savedId = prefs.getString(kNoticeShowCountIdKey);
+        final shownCount = savedId == noticeConfig.id
+            ? (prefs.getInt(kNoticeShowCountKey) ?? 0)
+            : 0;
+        await prefs.setString(kNoticeShowCountIdKey, noticeConfig.id);
+        await prefs.setInt(kNoticeShowCountKey, shownCount + 1);
       }
     }
   }

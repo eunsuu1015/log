@@ -11,8 +11,12 @@ import '../extensions/entry_ext.dart';
 /// 기록 저장·삭제 후 홈 화면 위젯 데이터를 SharedPreferences에 저장하고
 /// Android 위젯 갱신을 요청한다.
 class HomeWidgetService {
-  static const _receiverName =
+  static const _receiverSmall =
       'com.tistory.es1015.poopoolog.widget.PooPooWidgetReceiver';
+  static const _receiverMedium =
+      'com.tistory.es1015.poopoolog.widget.PooPooWidgetMediumReceiver';
+  static const _receiverLarge =
+      'com.tistory.es1015.poopoolog.widget.PooPooWidgetLargeReceiver';
 
   /// 오늘 기록을 DB에서 조회해 홈 위젯 SharedPreferences를 갱신하고
   /// Android 위젯 리드로를 요청한다. 기록 저장·삭제 후 fire-and-forget으로 호출한다.
@@ -26,13 +30,15 @@ class HomeWidgetService {
     await Future.wait([
       HomeWidget.saveWidgetData('visit_count', data.visitCount),
       HomeWidget.saveWidgetData('last_time', data.lastTime),
-      HomeWidget.saveWidgetData('last_mood_label', data.lastMoodLabel),
       HomeWidget.saveWidgetData('last_mood_color', data.lastMoodColor),
-      HomeWidget.saveWidgetData('today_dots', data.todayDots),
-      HomeWidget.saveWidgetData('date_label', data.dateLabel),
+      HomeWidget.saveWidgetData('today_records', data.todayRecords),
     ]);
 
-    await HomeWidget.updateWidget(qualifiedAndroidName: _receiverName);
+    await Future.wait([
+      HomeWidget.updateWidget(qualifiedAndroidName: _receiverSmall),
+      HomeWidget.updateWidget(qualifiedAndroidName: _receiverMedium),
+      HomeWidget.updateWidget(qualifiedAndroidName: _receiverLarge),
+    ]);
   }
 
   /// 오늘 기록 목록으로부터 위젯 표시 데이터를 계산한다.
@@ -44,14 +50,16 @@ class HomeWidgetService {
 
     return WidgetData(
       visitCount: '${visits.length}',
-      lastTime: last != null
-          ? '${last.recordedAt.hour.toString().padLeft(2, '0')}:${last.recordedAt.minute.toString().padLeft(2, '0')}'
-          : '',
-      lastMoodLabel: last?.moodLabel ?? '',
+      lastTime: last != null ? _timeStr(last) : '',
       lastMoodColor: last != null ? _hex(last.moodColor) : '',
-      todayDots: visits.map((e) => _hex(e.moodColor)).join(','),
-      dateLabel: '${now.month}/${now.day}',
+      todayRecords: visits.map((e) => '${_timeStr(e)}|${_hex(e.moodColor)}').join(','),
     );
+  }
+
+  static String _timeStr(Entry e) {
+    final h = e.recordedAt.hour.toString().padLeft(2, '0');
+    final m = e.recordedAt.minute.toString().padLeft(2, '0');
+    return '$h:$m';
   }
 
   static String _hex(Color c) {
@@ -64,19 +72,22 @@ class HomeWidgetService {
 
 /// [HomeWidgetService.buildData]의 반환 타입.
 class WidgetData {
+  /// 오늘 방문(visited=true) 횟수 문자열.
   final String visitCount;
+
+  /// 마지막 방문 시각 "HH:mm". 방문 없으면 빈 문자열.
   final String lastTime;
-  final String lastMoodLabel;
+
+  /// 마지막 방문 기분 색상 hex. 방문 없으면 빈 문자열.
   final String lastMoodColor;
-  final String todayDots;
-  final String dateLabel;
+
+  /// 오늘 방문 기록 전체. "HH:mm|#COLOR" 형식을 콤마로 구분. 방문 없으면 빈 문자열.
+  final String todayRecords;
 
   const WidgetData({
     required this.visitCount,
     required this.lastTime,
-    required this.lastMoodLabel,
     required this.lastMoodColor,
-    required this.todayDots,
-    required this.dateLabel,
+    required this.todayRecords,
   });
 }

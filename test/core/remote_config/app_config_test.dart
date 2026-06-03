@@ -46,6 +46,7 @@ void main() {
     test('android.latestVersion 파싱', () => expect(config.android.latestVersion, '1.2.3'));
     test('android.forceUpdate = true 파싱', () => expect(config.android.forceUpdate, isTrue));
     test('android.show 파싱', () => expect(config.android.show, 3));
+    test('android.releaseNotes 파싱', () => expect(config.android.releaseNotes, ''));
 
     test('ios.latestVersion 파싱', () => expect(config.ios.latestVersion, '1.1.0'));
     test('ios.forceUpdate = false 파싱', () => expect(config.ios.forceUpdate, isFalse));
@@ -77,6 +78,19 @@ void main() {
     test('ios 없으면 latest_version = "1.0.0"', () {
       final config = AppConfig.fromJsonString('{"notice":{},"android":{}}');
       expect(config.ios.latestVersion, '1.0.0');
+    });
+
+    test('releaseNotes 필드 누락 → 빈 문자열', () {
+      final config = AppConfig.fromJsonString(
+          '{"notice":{},"android":{"latest_version":"2.0.0"},"ios":{}}');
+      expect(config.android.releaseNotes, '');
+      expect(config.ios.releaseNotes, '');
+    });
+
+    test('releaseNotes 값 있으면 정상 파싱', () {
+      final config = AppConfig.fromJsonString(
+          '{"notice":{},"android":{"latest_version":"2.0.0","release_notes":"• 버그 수정"},"ios":{}}');
+      expect(config.android.releaseNotes, '• 버그 수정');
     });
 
     test('show 필드 누락 → 기본값 0', () {

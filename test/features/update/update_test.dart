@@ -116,7 +116,7 @@ void main() {
       expect(find.text('업데이트'), findsOneWidget);
     });
 
-    testWidgets('force_update=false → 취소 버튼 노출', (tester) async {
+    testWidgets('force_update=false → "나중에" 버튼 노출', (tester) async {
       await tester.pumpWidget(_wrap(
         Builder(builder: (ctx) => TextButton(
           onPressed: () => showDialog(
@@ -133,10 +133,10 @@ void main() {
       await tester.tap(find.text('열기'));
       await tester.pumpAndSettle();
 
-      expect(find.text('취소'), findsOneWidget);
+      expect(find.text('나중에'), findsOneWidget);
     });
 
-    testWidgets('force_update=true → 취소 버튼 없음', (tester) async {
+    testWidgets('force_update=true → "나중에" 버튼 없음', (tester) async {
       await tester.pumpWidget(_wrap(
         Builder(builder: (ctx) => TextButton(
           onPressed: () => showDialog(
@@ -153,10 +153,10 @@ void main() {
       await tester.tap(find.text('열기'));
       await tester.pumpAndSettle();
 
-      expect(find.text('취소'), findsNothing);
+      expect(find.text('나중에'), findsNothing);
     });
 
-    testWidgets('취소 버튼 탭 → 팝업 닫힘', (tester) async {
+    testWidgets('"나중에" 버튼 탭 → 팝업 닫힘', (tester) async {
       await tester.pumpWidget(_wrap(
         Builder(builder: (ctx) => TextButton(
           onPressed: () => showDialog(
@@ -173,10 +173,52 @@ void main() {
       await tester.tap(find.text('열기'));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('취소'));
+      await tester.tap(find.text('나중에'));
       await tester.pumpAndSettle();
 
       expect(find.text('업데이트 안내'), findsNothing);
+    });
+
+    testWidgets('releaseNotes 있으면 "업데이트 내용" 섹션 표시', (tester) async {
+      await tester.pumpWidget(_wrap(
+        Builder(builder: (ctx) => TextButton(
+          onPressed: () => showDialog(
+            context: ctx,
+            builder: (_) => const UpdateDialog(
+              latestVersion: '1.0.1',
+              forceUpdate: false,
+              releaseNotes: '• 버그 수정\n• 성능 개선',
+            ),
+          ),
+          child: const Text('열기'),
+        )),
+      ));
+
+      await tester.tap(find.text('열기'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('업데이트 내용'), findsOneWidget);
+      expect(find.textContaining('버그 수정'), findsOneWidget);
+    });
+
+    testWidgets('releaseNotes 없으면 "업데이트 내용" 섹션 미표시', (tester) async {
+      await tester.pumpWidget(_wrap(
+        Builder(builder: (ctx) => TextButton(
+          onPressed: () => showDialog(
+            context: ctx,
+            builder: (_) => const UpdateDialog(
+              latestVersion: '1.0.1',
+              forceUpdate: false,
+            ),
+          ),
+          child: const Text('열기'),
+        )),
+      ));
+
+      await tester.tap(find.text('열기'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('업데이트 내용'), findsNothing);
     });
 
     testWidgets('업데이트 버튼 탭 → 스토어 URL 호출', (tester) async {

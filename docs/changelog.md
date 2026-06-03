@@ -2,6 +2,74 @@
 
 ---
 
+### [2026-06-03] 캘린더 날짜 선택 동작 통일 / 통계 피크 타임 데이터 부족 케이스 처리
+
+- **변경 사항:**
+  - 캘린더 날짜 선택: 기록 없는 날 탭 시 기록 입력 화면 자동 열림 → 하단 패널 표시로 통일
+  - 캘린더 날짜 선택: 기록 없는 날 하단 패널에 "저장된 기록이 없어요 / 이 날의 기록을 추가해보세요" 빈 상태 UI 표시 (기록 추가는 FAB 사용)
+  - 통계 피크 타임: `maxCount == 1 && peakHours.length > 1` 조건일 때 "아직 패턴을 파악하기 어려워요." 메시지 표시 (피크 시간 숫자/칩 숨김)
+- **영향받는 파일:**
+  - 수정 - `lib/features/calendar/calendar_screen.dart` — `onDaySelected` 자동 화면 전환 제거, 항상 패널 표시, `_EmptyDayState` 위젯 추가
+  - 수정 - `lib/features/stats/widgets/stat_heat_map_grid.dart` — `_PeakTimeSummary` 데이터 부족 분기 추가
+
+---
+
+### [2026-06-03] 업데이트·공지 팝업 개선 및 SharedPreferences 키 누적 방지
+
+- **변경 사항:**
+  - 업데이트 팝업: Remote Config `release_notes` 값 수신 후 팝업 본문에 표시
+  - 업데이트 팝업: 선택적 업데이트 '취소' → '나중에' 텍스트 변경
+  - 업데이트 팝업: 선택적·강제 업데이트 모두 외부 탭·뒤로가기 차단 (`PopScope(canPop: false)` + `barrierDismissible: false`)
+  - 공지 팝업: 외부 탭·뒤로가기 차단 (`PopScope(canPop: false)` 추가, 외부 탭은 기존 차단 유지)
+  - 공지 노출 횟수: `notice_show_count_{id}` (공지마다 키 추가) → 고정 키 2개 (`notice_show_count`, `notice_show_count_id`)로 변경
+  - 업데이트 노출 횟수: `update_show_count_{platform}_{version}` → 고정 키 2개 (`update_show_count`, `update_show_count_id`)로 변경
+  - ID/버전이 바뀌면 기준 ID 불일치로 카운트를 0으로 간주(논리적 리셋) — 키 삭제 없이 누적 방지
+- **영향받는 파일:**
+  - 수정 - `lib/core/remote_config/app_config.dart` — `UpdateConfig`에 `releaseNotes` 필드 추가
+  - 수정 - `lib/features/update/force_update_dialog.dart` — `releaseNotes` 표시, '나중에' 텍스트, 뒤로가기 차단
+  - 수정 - `lib/features/notice/notice_dialog.dart` — `PopScope(canPop: false)` 추가
+  - 수정 - `lib/features/shell/app_shell.dart` — `barrierDismissible: false` 고정, `releaseNotes` 전달
+  - 수정 - `lib/core/notice/notice.dart` — 접두사 상수 2개 제거, 고정 키 상수 4개로 교체
+  - 수정 - `docs/architecture_analysis.md` — SharedPreferences 키 관리 방법 상세화
+
+### [2026-06-03] CSV 가져오기·내보내기 개선 / 통계 히트맵 터치 개선 / 앱 이름 한글화
+
+- **변경 사항:**
+  - CSV 가져오기: `FileType.custom` → `FileType.any`로 변경 — Google Drive 등 외부 저장소에서 MIME 타입 불일치로 파일이 표시 안 되는 버그 수정
+  - CSV 가져오기: `.txt` 허용 제거, `.csv`만 허용 (내보내기가 CSV 전용이므로)
+  - CSV 내보내기: `share_plus` 공유 시트 방식 → `FilePicker.saveFile()`로 변경 — 사용자가 내 파일 앱에서 저장 위치를 직접 지정
+  - CSV 내보내기 파일명: 타임스탬프(ms) → 날짜 기반 `poopoolog_YYYYMMDD.csv` 형식으로 변경
+  - 통계 화면 시간대별 히트맵: 피크 시간 요약 카드 + 그리드 영역 터치 시 "자세히 보기" 바텀시트 표시
+  - Android 앱 이름 한글화: `android:label="poopoolog"` → `@string/app_name`("푸푸로그") 으로 변경
+- **영향받는 파일:**
+  - 수정 - `lib/features/more/more_screen.dart` — 가져오기 FileType·확장자 검증 수정, 내보내기 saveFile 방식으로 전환
+  - 수정 - `lib/features/stats/widgets/stat_heat_map_grid.dart` — 히트맵 그리드 영역 GestureDetector 추가
+  - 신규 - `android/app/src/main/res/values/strings.xml` — 앱 이름 문자열 리소스
+  - 수정 - `android/app/src/main/AndroidManifest.xml` — android:label을 strings.xml 참조로 변경
+- **특이사항 및 남은 작업:**
+  - `share_plus`, `path_provider`, `dart:io` import 제거 완료 (`flutter analyze` 0 이슈 확인)
+
+### [2026-06-03] Android 홈 화면 위젯 다중 사이즈 지원 및 표시 내용 개편
+
+- **변경 사항:**
+  - 위젯 3종 분리 등록 (1×1 / 2×1 / 2×2) — 홈 화면 위젯 추가 시 피커에서 크기 직접 선택 가능
+  - 위젯 표시 내용 전면 개편: 날짜 레이블("오늘") 추가, 기분 레이블 제거 → 색상 도트로 통일, 오늘 방문 없으면 "안 감"/"안 다녀왔어요" 표시
+  - 2×2 위젯: 마지막 기록 1건 → 오늘 전체 기록(시간 + 기분 도트) 목록으로 변경 (최대 4건)
+  - SharedPreferences 데이터 구조 변경: `lastMoodLabel`, `todayDots`, `dateLabel` 제거 → `today_records`("HH:mm|#COLOR,..." 형식) 추가
+  - 기록 저장·삭제 시 3개 receiver 모두 갱신하도록 `HomeWidgetService.update()` 수정
+- **영향받는 파일:**
+  - 신규 - `android/.../widget/PooPooWidgetMediumReceiver.kt` — 2×1 위젯 receiver
+  - 신규 - `android/.../widget/PooPooWidgetLargeReceiver.kt` — 2×2 위젯 receiver
+  - 신규 - `android/app/src/main/res/xml/poopoo_widget_info_medium.xml` — 2×1 기본 크기 설정
+  - 신규 - `android/app/src/main/res/xml/poopoo_widget_info_large.xml` — 2×2 기본 크기 설정
+  - 수정 - `android/.../widget/PooPooWidget.kt` — 3개 레이아웃 전면 재설계
+  - 수정 - `android/.../widget/WidgetDataStore.kt` — `todayRecords: List<Pair<String,String>>` 구조로 변경
+  - 수정 - `android/app/src/main/AndroidManifest.xml` — 3개 receiver 등록 (라벨: 1x1/2x1/2x2)
+  - 수정 - `lib/core/widget/home_widget_service.dart` — `todayRecords` 저장, 3개 receiver 갱신
+  - 수정 - `android/.../widget/WidgetDataStoreTest.kt` — 신규 데이터 구조 기준 테스트로 전면 교체
+
+---
+
 ### [2026-06-02] 버그 수정 및 기능 개선
 
 - **변경 사항:**

@@ -1,14 +1,12 @@
 import 'dart:convert';
-import 'dart:io';
 import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:drift/drift.dart' show Value;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -419,14 +417,28 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
       );
     }
 
-    final dir = await getTemporaryDirectory();
-    final ts = DateTime.now().millisecondsSinceEpoch;
-    final file = File('${dir.path}/poopoolog_$ts.csv');
-    await file.writeAsString(buffer.toString(), encoding: utf8);
+    final now = DateTime.now();
+    final ts =
+        '${now.year}'
+        '${now.month.toString().padLeft(2, '0')}'
+        '${now.day.toString().padLeft(2, '0')}';
+    final bytes = utf8.encode(buffer.toString());
 
-    await Share.shareXFiles([
-      XFile(file.path, mimeType: 'text/csv'),
-    ], subject: 'PooPooLog 기록 내보내기');
+    // 사용자가 내 파일 앱에서 저장 위치를 직접 선택한다.
+    final savedPath = await FilePicker.platform.saveFile(
+      dialogTitle: '저장 위치 선택',
+      fileName: 'poopoolog_$ts.csv',
+      type: FileType.custom,
+      allowedExtensions: ['csv'],
+      bytes: Uint8List.fromList(bytes),
+    );
+
+    if (!mounted) return;
+    if (savedPath != null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('저장됐어요')));
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -435,14 +447,25 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
 
   Future<void> _importCsv() async {
     // 1. 파일 선택
+    // FileType.any 사용 — FileType.custom은 Google Drive 등 외부 저장소에서
+    // MIME 타입 불일치로 CSV 파일이 표시되지 않는 문제가 있다.
     final result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['csv', 'txt'],
+      type: FileType.any,
       withData: true,
     );
     if (result == null || result.files.isEmpty) return;
 
-    // 2. 바이트 읽기
+    // 2. 확장자 검증 (.csv만 허용)
+    final name = result.files.first.name.toLowerCase();
+    if (!name.endsWith('.csv')) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('CSV 파일만 가져올 수 있어요')),
+      );
+      return;
+    }
+
+    // 3. 바이트 읽기
     final bytes = result.files.first.bytes;
     if (bytes == null) {
       if (!mounted) return;

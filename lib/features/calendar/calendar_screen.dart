@@ -110,14 +110,6 @@ class CalendarScreen extends ConsumerWidget {
               },
               onDaySelected: (day) {
                 ref.read(selectedDayProvider.notifier).state = day;
-                final dayKey = DateTime(day.year, day.month, day.day);
-                final entries = monthlyEntries[dayKey] ?? [];
-                final isFuture = dayKey.isAfter(
-                  DateTime(now.year, now.month, now.day),
-                );
-                if (entries.isEmpty && !isFuture) {
-                  _openRecordScreen(context, ref, day);
-                }
               },
               onMonthPickerTap: () async {
                 final picked = await showMonthPickerSheet(
@@ -344,7 +336,7 @@ class _CalendarBody extends StatelessWidget {
         ),
         const SizedBox(height: 15),
         const Divider(height: 1, thickness: 1, color: Color(0x33808080)),
-        if (selectedDay != null && selectedEntries.isNotEmpty) ...[
+        if (selectedDay != null) ...[
           _DayPanel(
             date: selectedDay!,
             entries: selectedEntries,
@@ -386,6 +378,37 @@ class _BeforeEarliestState extends StatelessWidget {
               fontWeight: FontWeight.w400,
               color: cs.onSurfaceVariant,
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 선택된 날짜에 기록이 없을 때 하단 패널에 표시하는 빈 상태 위젯.
+class _EmptyDayState extends StatelessWidget {
+  const _EmptyDayState();
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = context.cs;
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.notes_outlined, size: 40, color: cs.outlineVariant),
+          const SizedBox(height: 12),
+          Text(
+            '저장된 기록이 없어요',
+            style: context.tt.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: cs.onSurface,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            '이 날의 기록을 추가해보세요',
+            style: context.tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
           ),
         ],
       ),
@@ -440,14 +463,16 @@ class _DayPanel extends StatelessWidget {
             ),
           ),
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.fromLTRB(0, 0, 10, 80),
-              itemCount: entries.length,
-              itemBuilder: (_, i) => EntryCard(
-                entry: entries[i],
-                onTap: () => onEditEntry(entries[i]),
-              ),
-            ),
+            child: entries.isEmpty
+                ? const _EmptyDayState()
+                : ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(0, 0, 10, 80),
+                    itemCount: entries.length,
+                    itemBuilder: (_, i) => EntryCard(
+                      entry: entries[i],
+                      onTap: () => onEditEntry(entries[i]),
+                    ),
+                  ),
           ),
         ],
       ),

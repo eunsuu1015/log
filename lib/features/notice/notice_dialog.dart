@@ -24,25 +24,28 @@ class NoticeDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
 
-    return AlertDialog(
-      title: Text(notice.title),
-      content: Text(
-        notice.message,
-        style: TextStyle(color: cs.onSurfaceVariant, height: 1.6),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => _dismiss(context),
-          child: Text(
-            '다시 보지 않음',
-            style: TextStyle(color: cs.onSurfaceVariant),
+    return PopScope(
+      canPop: false,
+      child: AlertDialog(
+        title: Text(notice.title),
+        content: Text(
+          notice.message,
+          style: TextStyle(color: cs.onSurfaceVariant, height: 1.6),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => _dismiss(context),
+            child: Text(
+              '다시 보지 않음',
+              style: TextStyle(color: cs.onSurfaceVariant),
+            ),
           ),
-        ),
-        FilledButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('확인'),
-        ),
-      ],
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('확인'),
+          ),
+        ],
+      ),
     );
   }
 }

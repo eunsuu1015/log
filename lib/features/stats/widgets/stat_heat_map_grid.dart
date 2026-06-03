@@ -192,50 +192,57 @@ class StatHeatMapGrid extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 10),
-        // ── 피크 시간 요약 ────────────────────────────────────────────────
-        if (hasData) ...[
-          _PeakTimeSummary(peakHours: peakHours, maxCount: maxCount),
-          const SizedBox(height: 10),
-        ],
-        // ── 6×4 히트맵 격자 ──────────────────────────────────────────────
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 6,
-            mainAxisSpacing: 4,
-            crossAxisSpacing: 4,
-            childAspectRatio: 1.6,
-          ),
-          itemCount: 24,
-          itemBuilder: (_, h) {
-            final count = hourlyCounts[h];
-            final color = heatColor(count, maxCount, cs);
-            final isPeak = hasData && peakHours.contains(h);
-            return Column(
-              children: [
-                Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: color,
-                      borderRadius: BorderRadius.circular(5),
-                      border: isPeak
-                          ? Border.all(color: cs.primary, width: 1.5)
-                          : null,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '$h',
-                  style: TextStyle(
-                    fontSize: 9,
-                    color: cs.onSurfaceVariant.withValues(alpha: 0.65),
-                  ),
-                ),
+        // ── 피크 시간 요약 + 6×4 히트맵 격자 (터치 시 상세 시트 표시) ─────
+        GestureDetector(
+          onTap: hasData ? () => _showDetailSheet(context) : null,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (hasData) ...[
+                _PeakTimeSummary(peakHours: peakHours, maxCount: maxCount),
+                const SizedBox(height: 10),
               ],
-            );
-          },
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 6,
+                  mainAxisSpacing: 4,
+                  crossAxisSpacing: 4,
+                  childAspectRatio: 1.6,
+                ),
+                itemCount: 24,
+                itemBuilder: (_, h) {
+                  final count = hourlyCounts[h];
+                  final color = heatColor(count, maxCount, cs);
+                  final isPeak = hasData && peakHours.contains(h);
+                  return Column(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: color,
+                            borderRadius: BorderRadius.circular(5),
+                            border: isPeak
+                                ? Border.all(color: cs.primary, width: 1.5)
+                                : null,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '$h',
+                        style: TextStyle(
+                          fontSize: 9,
+                          color: cs.onSurfaceVariant.withValues(alpha: 0.65),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ],
+          ),
         ),
       ],
     );
@@ -261,11 +268,8 @@ class _PeakTimeSummary extends StatelessWidget {
     final cs = context.cs;
     final n = peakHours.length;
 
-    final subLabel = n == 1
-        ? '이 시간에 $maxCount회 방문'
-        : n == 2
-        ? '각 $maxCount회로 동률'
-        : '$n개 시간대 동률';
+    // maxCount == 1이고 피크 시간대가 여러 개면 패턴을 파악하기 어려운 상태
+    final isInsufficient = maxCount == 1 && n > 1;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -273,33 +277,60 @@ class _PeakTimeSummary extends StatelessWidget {
         color: cs.surfaceContainerLowest,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          if (n == 1)
-            _SinglePeak(hour: peakHours[0], cs: cs)
-          else
-            _MultiPeak(peakHours: peakHours, cs: cs),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
+      child: isInsufficient
+          ? Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  '가장 많이 방문한 시간',
-                  style: TextStyle(fontSize: 10, color: cs.onSurfaceVariant),
+                  '아직 패턴을 파악하기 어려워요.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: cs.onSurface,
+                  ),
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  subLabel,
-                  style: TextStyle(fontSize: 10, color: cs.onSurface),
+                  '기록이 더 쌓이면 주요 방문 시간을 알 수 있어요',
+                  style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
+                ),
+              ],
+            )
+          : Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                if (n == 1)
+                  _SinglePeak(hour: peakHours[0], cs: cs)
+                else
+                  _MultiPeak(peakHours: peakHours, cs: cs),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '가장 많이 방문한 시간',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: cs.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        n == 1
+                            ? '이 시간에 $maxCount회 방문'
+                            : n == 2
+                            ? '각 $maxCount회로 동률'
+                            : '$n개 시간대 동률',
+                        style: TextStyle(fontSize: 10, color: cs.onSurface),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
-          ),
-        ],
-      ),
     );
   }
 }

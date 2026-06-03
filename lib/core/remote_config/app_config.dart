@@ -45,17 +45,20 @@ class UpdateConfig {
   final String latestVersion;
   final bool forceUpdate;
   final int show;
+  final String releaseNotes;
 
   const UpdateConfig({
     required this.latestVersion,
     required this.forceUpdate,
     this.show = 0,
+    this.releaseNotes = '',
   });
 
   factory UpdateConfig.fromJson(Map<String, dynamic> json) => UpdateConfig(
         latestVersion: json['latest_version'] as String? ?? '1.0.0',
         forceUpdate: json['force_update'] as bool? ?? false,
         show: json['show'] as int? ?? 0,
+        releaseNotes: json['release_notes'] as String? ?? '',
       );
 
   /// currentVersion < latestVersion 이면 true (업데이트 필요).
