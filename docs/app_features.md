@@ -39,7 +39,7 @@
 
 선택된 날짜에 기록이 있을 때 표시.
 
-- `"m월 d일"` 헤더 + **추가** 버튼
+- `"m월 d일"` 헤더
 - 해당 날의 기록 목록 (`EntryCard` 리스트)
 - 리스트 하단 80px 여백 (FAB에 가리지 않도록)
 - 기록 탭 → 수정 화면으로 이동
@@ -173,16 +173,16 @@
 | 지원 | 피드백 보내기 | Google Forms 외부 링크 (`FEEDBACK_URL` dart-define 주입) |
 | 정보 | 개인정보처리방침 | 외부 링크 (`PRIVACY_POLICY_URL` dart-define 주입) |
 | 정보 | 오픈소스 라이선스 | `showLicensePage` |
-| 정보 | 앱 버전 | 버전 표시 (5회 탭 시 테스트 데이터 생성 히든 기능) |
+| 정보 | 앱 버전 | 버전 표시. 최신 버전이 아니면 "업데이트" 칩 표시 및 탭 시 스토어 이동. 버전 항목 11회 탭 시 테스트 데이터 생성 히든 기능 활성화 |
 | 데이터 | 내보내기 (CSV) | 전체 기록을 CSV로 내보내기 (`share_plus`) |
 | 데이터 | 가져오기 (CSV) | CSV 파일에서 기록 Upsert — 동일 `recordedAt` 있으면 덮어쓰고 없으면 추가. 확인 다이얼로그 포함. 헤더 컬럼명 기반 파싱으로 버전 호환 (`file_picker`) |
 | 데이터 | 데이터 초기화 | 확인 다이얼로그 후 전체 삭제 → 선택 날짜·포커스 월 오늘 리셋 → 캘린더 탭으로 이동 |
 
 ### 히든 기능 — 테스트 데이터 생성
 
-앱 버전 항목을 **5회 탭** 시 활성화.
+앱 버전 항목을 **11회 탭** 시 활성화.
 
-- 2025년 10월 1일 ~ 오늘까지 매일 0~4개 랜덤 기록 삽입
+- 2026년 5월 1일 ~ 오늘까지 매일 0~4개 랜덤 기록 삽입
 - `visited`: true / false 랜덤 (UI 스펙 상 null 제외)
 - `mood`: null 포함 4종 랜덤 (25% null / good / okay / bad)
 - `memo`: null 또는 빠른태그 문구 중 랜덤 (25% null)
@@ -260,7 +260,7 @@ Flutter 기록 저장·삭제
     → 4개 키 SharedPreferences에 저장
         (visit_count, last_time, last_mood_color,
          today_records)  ← "HH:mm|#COLOR,..." 형식
-    → HomeWidget.updateWidget() × 3개 receiver → UI 갱신
+    → HomeWidget.updateWidget() × 2개 receiver → UI 갱신
 ```
 
 ### SharedPreferences 키
@@ -291,7 +291,7 @@ Flutter 기록 저장·삭제
 | 방문 횟수 | 20sp bold (1×1) / 18sp bold (2×1) / 20sp bold (2×2) |
 | 시각·보조 텍스트 | 11sp, onSurfaceVariant(`#49454F`) |
 | + 버튼 | 원형 32dp, `#2D6A4F`(AppColors.lightPrimary) 배경 |
-| 기분 도트 | 원형 8dp, 기분 색상 (좋음 `#3DA06C` / 보통 `#CC7D30` / 나쁨 `#C64848` / 없음 `#8CA896`) |
+| 기분 도트 | 원형 8dp, 기분 색상 (좋음 `#3DA06C` / 보통 `#CC7D30` / 나쁨 `#C64848` / 다녀옴+기분없음 `#8CA896` / 안 감 `#C4CCCA`) |
 
 ---
 

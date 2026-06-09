@@ -184,7 +184,8 @@ RecordScreen 저장
 
 **구현 파일 (Android):**
 - `widget/PooPooWidget.kt` — Glance `SizeMode.Responsive`로 3종 레이아웃 분기
-- `widget/PooPooWidgetReceiver.kt` — `HomeWidgetGlanceWidgetReceiver` 확장, 자정 리셋 AlarmManager
+- `widget/PooPooWidgetReceiver.kt` — 1×1 위젯 `HomeWidgetGlanceWidgetReceiver` 확장, 자정 리셋 AlarmManager
+- `widget/PooPooWidgetMediumReceiver.kt` — 2×1 위젯 Receiver
 - `widget/WidgetDataStore.kt` — `"HomeWidgetPreferences"` SharedPreferences 읽기
 - `widget/BootReceiver.kt` — `BOOT_COMPLETED` 수신 시 위젯 갱신 + 알람 재등록
 - `res/xml/poopoo_widget_info.xml` — 위젯 메타데이터 (updatePeriodMillis=1800000)
@@ -205,7 +206,8 @@ RecordScreen 저장
 | `AppTheme.moodGood` | `#3DA06C` (맑은 숲 초록) | 좋음 |
 | `AppTheme.moodOkay` | `#CC7D30` (따뜻한 앰버) | 보통 |
 | `AppTheme.moodBad` | `#C64848` (차분한 로즈 레드) | 나쁨 |
-| `AppTheme.moodNone` | `#8CA896` (그레이 그린 뉴트럴) | 안 감 / 미입력 |
+| `AppTheme.moodNone` | `#8CA896` (그레이 그린 뉴트럴) | 다녀옴 + 기분 미입력 |
+| `AppTheme.moodNotVisited` | `#C4CCCA` (옅은 쿨 그레이) | 안 감 (`visited=false`) |
 
 Material 3 기반 수동 `ColorScheme` 구성 (라이트 Primary `#2D6A4F` / 다크 `#74C19A`). 테마 모드는 `shared_preferences`에 저장.
 

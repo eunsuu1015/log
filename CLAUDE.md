@@ -82,8 +82,8 @@ entry.timeStr          // recordedAt → "HH:mm"
 
 - 광고 단위 ID: `lib/core/ads/ad_ids.dart` — 현재 **테스트 ID** 사용 중, 출시 전 실제 ID로 교체 필요
 - AndroidManifest.xml의 `APPLICATION_ID`와 ios/Runner/Info.plist의 `GADApplicationIdentifier`도 함께 교체
-- 전면 광고: 5회 저장마다 1회 (`AdService._kInterstitialFrequency`)
-- 네이티브 광고: 타임라인 7번째 엔트리마다 삽입
+- 전면 광고: 최초 10회 저장 시 첫 노출, 이후 7회마다 1회 (`AdService._kFirstAdThreshold` / `_kInterstitialFrequency`)
+- 네이티브 광고: 타임라인 누적 엔트리 수가 10의 배수인 위치마다 삽입
 
 ### 테마 색상
 
@@ -92,14 +92,15 @@ entry.timeStr          // recordedAt → "HH:mm"
 | `AppTheme.moodGood` | `#3DA06C` (맑은 숲 초록) | 좋음 |
 | `AppTheme.moodOkay` | `#CC7D30` (따뜻한 앰버) | 보통 |
 | `AppTheme.moodBad` | `#C64848` (차분한 로즈 레드) | 나쁨 |
-| `AppTheme.moodNone` | `#8CA896` (그레이 그린 뉴트럴) | 안 감 / 미입력 |
+| `AppTheme.moodNone` | `#8CA896` (그레이 그린 뉴트럴) | 다녀옴 + 기분 미입력 |
+| `AppTheme.moodNotVisited` | `#C4CCCA` (옅은 쿨 그레이) | 안 감 (`visited=false`) |
 
 Material 3 기반, 라이트·다크 테마 모두 지원. 테마 모드는 `shared_preferences`에 저장.
 
 ## 주요 규칙 및 패턴
 
 - **언어**: UI 텍스트와 날짜 포맷은 모두 `ko_KR` 기준
-- **타임라인 페이징**: 초기 로드 최근 6개월, `loadMore()`로 6개월씩 확장. 앱 시작일은 `2026-01-01`로 고정
+- **타임라인 페이징**: 초기 로드 최근 6개월, `loadMore()`로 6개월씩 확장. 앱 시작일은 `2026-05-01`로 고정
 - **DB 쿼리**: `getEntriesInRange(from, to)` — from 이상 to 미만 범위 (exclusive end)
 - **기록 삽입 시 ID**: `RecordModel.id == 0`이면 신규 삽입, 아니면 수정
 

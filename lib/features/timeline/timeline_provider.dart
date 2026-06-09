@@ -53,7 +53,7 @@ class TimelineState {
   /// 현재까지 로드된 범위의 시작 날짜
   final DateTime rangeStart;
 
-  /// 앱 시작일(2026-01-01) 이전 데이터가 남아있는지 여부
+  /// 앱 시작일(2026-05-01) 이전 데이터가 남아있는지 여부
   final bool hasMore;
 
   /// loadMore() 진행 중 여부

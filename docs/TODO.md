@@ -84,7 +84,7 @@
 - [x] **AdMob App ID 교체**: 광고 단위 ID와 별개의 앱 식별자 (출시 필수)
   - Android: `android/local.properties`에 `admob.app.id=ca-app-pub-XXXXX~YYYYY` 추가
   - iOS: `ios/Flutter/Secrets.xcconfig`의 `ADMOB_APP_ID` 값 교체
-- [x] **전면 광고 빈도 조정**: 최초 10회 저장 시 첫 노출, 이후 7회마다 1회 (`ad_service.dart`). 이후에 5회로 변경 예정?
+- [x] **전면 광고 빈도 조정**: 최초 10회 저장 시 첫 노출, 이후 7회마다 1회 (`ad_service.dart`)
 - [ ] **iOS SKAdNetworkIdentifier 목록 보완**: AdMob 공식 문서 기준 전체 목록으로 교체
 
 ---
