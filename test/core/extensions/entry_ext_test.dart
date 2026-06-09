@@ -78,9 +78,9 @@ void main() {
       expect(e.moodColor, AppTheme.moodNone);
     });
 
-    test('visited=false → moodNone', () async {
+    test('visited=false → moodNotVisited', () async {
       final e = await _insertEntry(db, recordedAt: base, visited: false);
-      expect(e.moodColor, AppTheme.moodNone);
+      expect(e.moodColor, AppTheme.moodNotVisited);
     });
 
     test('visited=true + mood=null → moodNone', () async {

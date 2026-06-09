@@ -198,7 +198,9 @@
 - [x] `RecordModel` 변환 로직 테스트 (`record_model.dart`) — copyWith sentinel 패턴·==·hashCode 12개
 - [x] `EntryMapper` / `RecordModelMapper` 확장 테스트 (`entry_ext.dart`) — EntryX·MoodLevelX 18개
 - [x] `StatsResult` 집계 로직 테스트 (`stats_provider.dart`) — fromEntries() 집계 21개
-- [ ] 타임라인 필터·그룹화 로직 테스트 (`timeline_provider.dart`)
+- [x] 타임라인 필터·그룹화 로직 테스트 (`timeline_provider.dart`) — DayGroup 빌드·날짜 그룹화·필터 조건 13개
+- [x] DB CRUD 명시적 테스트 — insertEntry·updateEntry·deleteEntry·getEntriesInRange 경계값 15개
+- [x] `_PeakTimeSummary` 데이터 부족 분기 테스트 (maxCount==1 && peakHours>1) — 3개
 
 ### 통합 테스트
 - [ ] DB CRUD 통합 테스트 (실제 SQLite, 모킹 금지)

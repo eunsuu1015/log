@@ -118,7 +118,12 @@ void main() {
   // ─────────────────────────────────────────────────────────────────────────
 
   group('DayPanel', () {
-    testWidgets('기록 있는 날짜 선택 → DayPanel 헤더·추가 버튼 표시', (tester) async {
+    testWidgets('기록 있는 날짜 선택 → DayPanel 헤더 표시', (tester) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
       final db = _makeDb();
       final targetDate = DateTime(2026, 5, 10, 9, 0);
       await db.insertEntry(
@@ -142,10 +147,14 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('5월 10일'), findsOneWidget);
-      expect(find.text('추가'), findsOneWidget);
     });
 
     testWidgets('DayPanel에 EntryCard 렌더링 (기분 레이블·메모·시간)', (tester) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
       final db = _makeDb();
       final targetDate = DateTime(2026, 5, 10, 9, 0);
       await db.insertEntry(
@@ -187,11 +196,16 @@ void main() {
       await tester.pumpWidget(_buildScreen(container));
       await tester.pumpAndSettle();
 
-      // 추가 버튼은 DayPanel 헤더에만 존재
+      // 추가 버튼은 제거됨 — DayPanel 자체도 없으므로 날짜 헤더 없음
       expect(find.text('추가'), findsNothing);
     });
 
     testWidgets('같은 날 기록 여러 개 → EntryCard 여러 개 렌더링', (tester) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
       final db = _makeDb();
       final day = DateTime(2026, 5, 15);
       for (final hour in [8, 12, 18]) {
@@ -264,6 +278,11 @@ void main() {
 
   group('미래 날짜', () {
     testWidgets('미래 날짜 선택 → DayPanel 표시 + 빈 상태 UI', (tester) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
       final db = _makeDb();
       final futureDate = DateTime.now().add(const Duration(days: 3));
       final container = ProviderContainer(overrides: [
@@ -281,8 +300,6 @@ void main() {
 
       // 미래 날짜도 DayPanel 표시 (기록 없으면 빈 상태 UI)
       expect(find.text('저장된 기록이 없어요'), findsOneWidget);
-      // DayPanel 헤더의 "추가" 버튼 표시
-      expect(find.text('추가'), findsOneWidget);
     });
   });
 

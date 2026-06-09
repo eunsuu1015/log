@@ -2,6 +2,7 @@
 // 필터 상태, 날짜별 그룹 모델, 기록 조회·정렬·그룹화 로직을 담당한다.
 // 초기 로드: 최근 3개월 / 더 불러오기: 3개월씩 확장
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:poopoolog/core/database/app_database.dart';
 import 'package:poopoolog/core/database/database_provider.dart';
@@ -143,9 +144,16 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
     );
   }
 
+  /// 테스트 전용: 필터·그룹화 순수 로직을 직접 검증할 수 있도록 노출한다.
+  @visibleForTesting
+  static List<DayGroup> buildGroupsForTest(
+    List<Entry> entries,
+    TimelineFilter filter,
+  ) => _toGroups(entries, filter);
+
   /// 필터를 적용한 뒤 Entry 목록을 날짜별 DayGroup 리스트로 변환한다.
   /// 그룹 내 entries는 시간 오름차순, 반환 목록은 날짜 내림차순(최신 우선)으로 정렬된다.
-  List<DayGroup> _toGroups(List<Entry> entries, TimelineFilter filter) {
+  static List<DayGroup> _toGroups(List<Entry> entries, TimelineFilter filter) {
     final filtered =
         entries
             .where(

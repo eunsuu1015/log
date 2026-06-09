@@ -91,7 +91,12 @@ class AppDatabase extends _$AppDatabase {
     try {
       return await into(entries).insert(companion);
     } catch (e, s) {
-      developer.log('insertEntry 실패', name: 'AppDatabase', error: e, stackTrace: s);
+      developer.log(
+        'insertEntry 실패',
+        name: 'AppDatabase',
+        error: e,
+        stackTrace: s,
+      );
       rethrow;
     }
   }
@@ -101,7 +106,12 @@ class AppDatabase extends _$AppDatabase {
     try {
       return await update(entries).replace(companion);
     } catch (e, s) {
-      developer.log('updateEntry 실패', name: 'AppDatabase', error: e, stackTrace: s);
+      developer.log(
+        'updateEntry 실패',
+        name: 'AppDatabase',
+        error: e,
+        stackTrace: s,
+      );
       rethrow;
     }
   }
@@ -111,7 +121,12 @@ class AppDatabase extends _$AppDatabase {
     try {
       return await (delete(entries)..where((e) => e.id.equals(id))).go();
     } catch (e, s) {
-      developer.log('deleteEntry 실패', name: 'AppDatabase', error: e, stackTrace: s);
+      developer.log(
+        'deleteEntry 실패',
+        name: 'AppDatabase',
+        error: e,
+        stackTrace: s,
+      );
       rethrow;
     }
   }
@@ -124,18 +139,21 @@ class AppDatabase extends _$AppDatabase {
 
   /// recordedAt이 동일한 기록이 있으면 해당 행을 덮어쓰고, 없으면 새로 삽입한다.
   /// CSV 가져오기처럼 중복 없는 upsert가 필요할 때 사용한다.
-  Future<void> upsertEntryByTime(EntriesCompanion companion) async {
+  /// 리턴 값 [bool]: 새로 추가된 데이터면 true, 기존 데이터를 덮어썼으면 false를 반환한다.
+  Future<bool> upsertEntryByTime(EntriesCompanion companion) async {
     try {
-      final existing = await (select(entries)
-            ..where(
-              (e) => e.recordedAt.equals(companion.recordedAt.value),
-            ))
-          .getSingleOrNull();
+      final existing =
+          await (select(entries)
+                ..where((e) => e.recordedAt.equals(companion.recordedAt.value)))
+              .getSingleOrNull();
       if (existing != null) {
-        await (update(entries)..where((e) => e.id.equals(existing.id)))
-            .write(companion);
+        await (update(
+          entries,
+        )..where((e) => e.id.equals(existing.id))).write(companion);
+        return false; // 기존 데이터를 덮어씀
       } else {
         await into(entries).insert(companion);
+        return true; // 새로운 데이터를 추가함
       }
     } catch (e, s) {
       developer.log(

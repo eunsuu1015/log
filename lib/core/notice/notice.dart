@@ -26,13 +26,5 @@ class Notice {
   final String title;
   final String message;
 
-  const Notice({
-    required this.id,
-    required this.title,
-    required this.message,
-  });
+  const Notice({required this.id, required this.title, required this.message});
 }
-
-/// true로 설정하면 '다시 보지 않음' 여부와 무관하게 공지를 항상 표시한다.
-/// 출시 전 반드시 false로 되돌릴 것.
-const kForceShowNotice = false;

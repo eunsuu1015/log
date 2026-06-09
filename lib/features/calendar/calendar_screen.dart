@@ -90,8 +90,7 @@ class CalendarScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('캘린더'),
         actions: [
-          if (!isCurrentMonth)
-            makeGoToTodayButton(isPastMonth),
+          if (!isCurrentMonth) makeGoToTodayButton(isPastMonth),
           const SizedBox(width: 10),
         ],
       ),
@@ -151,8 +150,7 @@ class CalendarScreen extends ConsumerWidget {
         final now = DateTime.now();
         final today = DateTime(now.year, now.month, now.day);
         // 미래 날짜 선택 후 FAB 탭 시 날짜를 오늘로 대체
-        final effectiveDate =
-            presetDate.isAfter(today) ? today : presetDate;
+        final effectiveDate = presetDate.isAfter(today) ? today : presetDate;
         ref
             .read(recordFormProvider(null).notifier)
             .setRecordedAt(
@@ -310,18 +308,35 @@ class _CalendarBody extends StatelessWidget {
               );
             },
             // 선택한 날짜를 진한색 원으로 표시
-            selectedBuilder: (context, day, _) => _buildDayCircle(
-              context,
-              day,
-              bgColor: colorScheme.primary,
-              textColor: colorScheme.onPrimary,
-            ),
+            selectedBuilder: (context, day, _) {
+              final isToday = isSameDay(day, DateTime.now());
+
+              if (isToday) {
+                // 💡 [요청 1] 오늘 날짜를 선택한 경우에는 '메인 색상' 노출
+                return _buildDayCircle(
+                  context,
+                  day,
+                  bgColor: colorScheme.primary, // 100% 진한 메인 색
+                  textColor: colorScheme.onPrimary, // 흰색 계열 텍스트
+                );
+              } else {
+                // 💡 [요청 2] 오늘이 아닌 날짜를 선택한 경우: '배경은 연한색', '텍스트는 일반 색상'
+                return _buildDayCircle(
+                  context,
+                  day,
+                  bgColor: colorScheme.primary.withValues(
+                    alpha: 0.15,
+                  ), // 연한색 배경
+                  textColor: colorScheme.onSurface, // 일반 다른 날짜들과 동일한 텍스트 색상
+                );
+              }
+            },
             // 오늘 날짜를 연한색 원으로 표시
             todayBuilder: (context, day, _) => _buildDayCircle(
               context,
               day,
-              bgColor: context.cs.primary,
-              textColor: Colors.white,
+              bgColor: colorScheme.primary, // 100% 진한 메인 색
+              textColor: colorScheme.onPrimary, // 흰색 계열 텍스트
             ),
           ),
           onDaySelected: (selected, _) => onDaySelected(selected),
@@ -393,24 +408,27 @@ class _EmptyDayState extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = context.cs;
     return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.notes_outlined, size: 40, color: cs.outlineVariant),
-          const SizedBox(height: 12),
-          Text(
-            '저장된 기록이 없어요',
-            style: context.tt.bodyMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: cs.onSurface,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 50),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.notes_outlined, size: 40, color: cs.outlineVariant),
+            const SizedBox(height: 10),
+            Text(
+              '저장된 기록이 없어요',
+              style: context.tt.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: cs.onSurface,
+              ),
             ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            '이 날의 기록을 추가해보세요',
-            style: context.tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-          ),
-        ],
+            const SizedBox(height: 6),
+            Text(
+              '이 날의 기록을 추가해보세요',
+              style: context.tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -436,7 +454,7 @@ class _DayPanel extends StatelessWidget {
       child: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(15, 6, 12, 2),
+            padding: const EdgeInsets.fromLTRB(18, 16, 16, 0),
             child: Row(
               children: [
                 Text(
@@ -446,19 +464,19 @@ class _DayPanel extends StatelessWidget {
                     letterSpacing: 0.1,
                   ),
                 ),
-                const Spacer(),
-                TextButton.icon(
-                  onPressed: onAddEntry,
-                  icon: const Icon(Icons.add, size: 16),
-                  label: const Text('추가'),
-                  style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
-                    textStyle: const TextStyle(fontSize: 13),
-                  ),
-                ),
+                // const Spacer(),
+                // TextButton.icon(
+                //   onPressed: onAddEntry,
+                //   icon: const Icon(Icons.add, size: 16),
+                //   label: const Text('추가'),
+                //   style: TextButton.styleFrom(
+                //     padding: const EdgeInsets.symmetric(
+                //       horizontal: 10,
+                //       vertical: 4,
+                //     ),
+                //     textStyle: const TextStyle(fontSize: 13),
+                //   ),
+                // ),
               ],
             ),
           ),

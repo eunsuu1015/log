@@ -2,9 +2,17 @@
 // 네트워크 실패 또는 파싱 오류 시 AppConfig.fallback을 반환해 앱이 정상 동작하도록 한다.
 
 import 'package:firebase_remote_config/firebase_remote_config.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/debug/debug_flags.dart';
 import '../../utils/logger.dart';
 import 'app_config.dart';
+
+/// Remote Config를 fetch해 AppConfig를 반환하는 Provider.
+/// AppShell과 MoreScreen 등 여러 화면에서 공유하며 결과를 캐싱한다.
+final appConfigProvider = FutureProvider<AppConfig>((ref) async {
+  return kDebugRemoteConfig ?? await RemoteConfigService.fetchAppConfig();
+});
 
 /// Remote Config 파라미터 키
 const _kConfigKey = 'app_config';

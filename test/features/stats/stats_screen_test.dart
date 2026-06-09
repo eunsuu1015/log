@@ -293,7 +293,7 @@ void main() {
       expect(find.text('기분 분포'), findsOneWidget);
     });
 
-    testWidgets('기분 데이터 없음 → "기분 분포" 섹션 미표시', (tester) async {
+    testWidgets('기분 데이터 없음 → "기분 분포" 섹션 표시 (빈 상태 카드)', (tester) async {
       final db = _makeDb();
       final now = DateTime.now();
       // mood=null 기록만 삽입
@@ -314,7 +314,8 @@ void main() {
       await tester.pumpWidget(_buildScreen(container));
       await tester.pumpAndSettle();
 
-      expect(find.text('기분 분포'), findsNothing);
+      // 기분 데이터 없어도 섹션 헤더는 항상 표시 (차트 대신 안내 카드)
+      expect(find.text('기분 분포'), findsOneWidget);
       expect(find.text('시간대별 방문'), findsOneWidget);
     });
   });
@@ -408,5 +409,66 @@ void main() {
       final color = StatHeatMapGrid.heatColor(10, 10, cs);
       expect(color.toARGB32(), 0xFF1B5E3A);
     });
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // _PeakTimeSummary 데이터 부족 분기
+  // ─────────────────────────────────────────────────────────────────────────
+
+  group('_PeakTimeSummary — 데이터 부족 분기 (maxCount == 1 && peakHours.length > 1)', () {
+    Widget buildGrid(List<int> counts) => MaterialApp(
+      home: Scaffold(body: StatHeatMapGrid(hourlyCounts: counts)),
+    );
+
+    testWidgets(
+      'maxCount == 1 && 피크 시간대 2개 → "아직 패턴을 파악하기 어려워요." 메시지 표시',
+      (tester) async {
+        // 9시·14시 각 1회 → maxCount=1, peakHours=[9,14] → isInsufficient=true
+        final counts = List<int>.filled(24, 0);
+        counts[9] = 1;
+        counts[14] = 1;
+
+        await tester.pumpWidget(buildGrid(counts));
+        await tester.pumpAndSettle();
+
+        expect(find.text('아직 패턴을 파악하기 어려워요.'), findsOneWidget);
+        expect(
+          find.text('기록이 더 쌓이면 주요 방문 시간을 알 수 있어요'),
+          findsOneWidget,
+        );
+        expect(find.text('가장 많이 방문한 시간'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'maxCount == 1 && 피크 시간대 1개 → 정상 카드 표시 (isInsufficient=false)',
+      (tester) async {
+        // 9시 1회만 → maxCount=1, peakHours=[9] → n==1이므로 isInsufficient=false
+        final counts = List<int>.filled(24, 0);
+        counts[9] = 1;
+
+        await tester.pumpWidget(buildGrid(counts));
+        await tester.pumpAndSettle();
+
+        expect(find.text('아직 패턴을 파악하기 어려워요.'), findsNothing);
+        expect(find.text('가장 많이 방문한 시간'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'maxCount >= 2 && 피크 시간대 복수 → 정상 카드 표시 (isInsufficient=false)',
+      (tester) async {
+        // 9시·14시 각 2회 → maxCount=2, peakHours=[9,14] → isInsufficient=false
+        final counts = List<int>.filled(24, 0);
+        counts[9] = 2;
+        counts[14] = 2;
+
+        await tester.pumpWidget(buildGrid(counts));
+        await tester.pumpAndSettle();
+
+        expect(find.text('아직 패턴을 파악하기 어려워요.'), findsNothing);
+        expect(find.text('가장 많이 방문한 시간'), findsOneWidget);
+      },
+    );
   });
 }

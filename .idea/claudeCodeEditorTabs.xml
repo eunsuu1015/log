@@ -1,11 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ClaudeCodeEditorTabs">
-    <option name="activeSessionId" value="25ac0688-dbdd-4038-8dbb-114a6339a5fa" />
+    <option name="activeSessionId" value="f50d806e-1442-44f3-9881-eb17e8032181" />
     <option name="openSessionIds">
       <list>
-        <option value="25ac0688-dbdd-4038-8dbb-114a6339a5fa" />
+        <option value="f50d806e-1442-44f3-9881-eb17e8032181" />
       </list>
+    </option>
+    <option name="sessionPaths">
+      <map>
+        <entry key="f50d806e-1442-44f3-9881-eb17e8032181" value="/sessions/ce19aeb4-e2c0-4158-b5e8-d09a17e14e8b" />
+      </map>
+    </option>
+    <option name="sessionTitles">
+      <map>
+        <entry key="f50d806e-1442-44f3-9881-eb17e8032181" value="@lib/features/timeline/timeline_screen.dart 155라인" />
+      </map>
     </option>
   </component>
 </project>

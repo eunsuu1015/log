@@ -36,17 +36,17 @@ const _kPages = [
   _PageData(
     type: _SlideType.record,
     title: '간편하게 기록해요',
-    description: '화면 하단 + 버튼으로\n방문 여부, 기분, 메모를 남길 수 있어요.',
+    description: '화장실 방문, 그때의 기분과 메모를\n가볍게 남겨보세요.',
   ),
   _PageData(
     type: _SlideType.calendar,
     title: '기분 흐름을 한눈에',
-    description: '캘린더에서 날짜별 색상 도트로\n기분 패턴을 한눈에 파악할 수 있어요.',
+    description: '캘린더에 표시되는 색상 도트로\n나의 하루하루 기분 패턴을 파악할 수 있어요.',
   ),
   _PageData(
     type: _SlideType.stats,
     title: '나만의 패턴을 발견해요',
-    description: '주로 몇 시에 방문하는지,\n어떤 기분이 많은지 통계로 확인해요.',
+    description: '주로 화장실에 몇 시에 방문하는지,\n어떤 기분이 많았는지 통계로 확인해 보세요.',
   ),
 ];
 
@@ -266,10 +266,12 @@ class _RecordPreview extends StatelessWidget {
             title: Text('화장실에 다녀왔어요', style: tt.titleSmall),
             trailing: Transform.scale(
               scale: 0.8,
-              child: Switch(
-                value: true,
-                onChanged: null,
-                activeColor: cs.primary,
+              child: IgnorePointer(
+                child: Switch(
+                  value: true,
+                  onChanged: (_) {},
+                  activeColor: cs.primary,
+                ),
               ),
             ),
             contentPadding: const EdgeInsets.symmetric(horizontal: 12),

@@ -37,9 +37,10 @@ extension MoodLevelX on MoodLevel {
 /// visited·mood 조합 판단과 시간 포맷팅을 한 곳에서 관리한다.
 extension EntryX on Entry {
   /// 방문 여부·기분을 고려한 표시 색상
-  /// 미방문·기분 없음은 AppTheme.moodNone(회색) 반환
+  /// 안 감은 moodNotVisited(옅은 회색), 기분 미입력은 moodNone(회색), 기분 있으면 기분 색상 반환
   Color get moodColor {
-    if (visited != true || mood == null) return AppTheme.moodNone;
+    if (visited == false) return AppTheme.moodNotVisited;
+    if (mood == null) return AppTheme.moodNone;
     return MoodLevel.values[mood!].color;
   }
 

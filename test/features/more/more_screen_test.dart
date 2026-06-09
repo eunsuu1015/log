@@ -393,7 +393,7 @@ void main() {
   // ─────────────────────────────────────────────────────────────────────────
 
   group('버전 히든 탭', () {
-    testWidgets('앱 버전 5회 탭 → 테스트 데이터 추가 다이얼로그 표시', (tester) async {
+    testWidgets('앱 버전 11회 탭 → 테스트 데이터 추가 다이얼로그 표시', (tester) async {
       final notifier = _FakePurchaseNotifier();
       final container = ProviderContainer(overrides: [
         purchaseNotifierProvider.overrideWith(() => notifier),
@@ -408,7 +408,7 @@ void main() {
       await tester.ensureVisible(find.text('앱 버전'));
       await tester.pumpAndSettle();
 
-      for (int i = 0; i < 5; i++) {
+      for (int i = 0; i < 11; i++) {
         await tester.tap(find.text('앱 버전'));
         await tester.pump();
       }
@@ -421,7 +421,7 @@ void main() {
       await tester.pumpAndSettle();
     });
 
-    testWidgets('4회 탭에서는 다이얼로그 미표시', (tester) async {
+    testWidgets('10회 탭에서는 다이얼로그 미표시', (tester) async {
       final notifier = _FakePurchaseNotifier();
       final container = ProviderContainer(overrides: [
         purchaseNotifierProvider.overrideWith(() => notifier),
@@ -436,7 +436,7 @@ void main() {
       await tester.ensureVisible(find.text('앱 버전'));
       await tester.pumpAndSettle();
 
-      for (int i = 0; i < 4; i++) {
+      for (int i = 0; i < 10; i++) {
         await tester.tap(find.text('앱 버전'));
         await tester.pump();
       }

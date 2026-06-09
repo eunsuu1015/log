@@ -280,12 +280,12 @@ void main() {
       );
     });
 
-    test('updateWidget 3개 receiver 모두 호출됨', () async {
+    test('updateWidget 2개 receiver 모두 호출됨', () async {
       final calls = _mockHomeWidgetChannel();
 
       await HomeWidgetService.update(db);
 
-      expect(calls.where((c) => c.method == 'updateWidget').length, 3);
+      expect(calls.where((c) => c.method == 'updateWidget').length, 2);
     });
 
     test('기록 삽입 후 update() — visit_count가 올바른 값으로 저장됨', () async {

@@ -192,8 +192,11 @@ class AppTheme {
   /// 나쁨 — 차분한 로즈 레드
   static const Color moodBad = Color(0xFFC64848);
 
-  /// 미입력 / 안 감 — 그레이 그린 뉴트럴
+  /// 기분 미입력 (다녀옴) — 그레이 그린 뉴트럴
   static const Color moodNone = Color(0xFF8CA896);
+
+  /// 안 감 — 옅고 차가운 회색 (moodNone보다 밝고 채도 낮음)
+  static const Color moodNotVisited = Color(0xFFC4CCCA);
 
   /// Material 3 라이트 테마.
   static ThemeData light() => _buildTheme(

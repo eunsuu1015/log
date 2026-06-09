@@ -20,6 +20,13 @@ class _FaceColors {
   final Color pupil;
 
   static _FaceColors forMood(MoodLevel? mood, bool? visited) {
+    if (visited == false) {
+      return const _FaceColors(
+        bg: Color(0xFFEEF1F0),
+        face: AppTheme.moodNotVisited,
+        pupil: Color(0xFF666666),
+      );
+    }
     if (visited != true) {
       return const _FaceColors(
         bg: Color(0xFFF0EFEC),

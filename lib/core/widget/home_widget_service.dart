@@ -15,8 +15,6 @@ class HomeWidgetService {
       'com.tistory.es1015.poopoolog.widget.PooPooWidgetReceiver';
   static const _receiverMedium =
       'com.tistory.es1015.poopoolog.widget.PooPooWidgetMediumReceiver';
-  static const _receiverLarge =
-      'com.tistory.es1015.poopoolog.widget.PooPooWidgetLargeReceiver';
 
   /// 오늘 기록을 DB에서 조회해 홈 위젯 SharedPreferences를 갱신하고
   /// Android 위젯 리드로를 요청한다. 기록 저장·삭제 후 fire-and-forget으로 호출한다.
@@ -37,7 +35,6 @@ class HomeWidgetService {
     await Future.wait([
       HomeWidget.updateWidget(qualifiedAndroidName: _receiverSmall),
       HomeWidget.updateWidget(qualifiedAndroidName: _receiverMedium),
-      HomeWidget.updateWidget(qualifiedAndroidName: _receiverLarge),
     ]);
   }
 

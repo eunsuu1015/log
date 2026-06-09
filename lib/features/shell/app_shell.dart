@@ -12,6 +12,7 @@ import 'package:poopoolog/features/more/more_screen.dart';
 import 'package:poopoolog/features/record/record_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../core/debug/debug_flags.dart';
 import '../../core/notice/notice.dart';
 import '../../core/remote_config/app_config.dart';
 import '../../core/remote_config/remote_config_service.dart';
@@ -48,8 +49,7 @@ class _AppShellState extends ConsumerState<AppShell> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      // Remote Config를 한 번만 fetch해 업데이트·공지에 모두 사용한다
-      final config = await RemoteConfigService.fetchAppConfig();
+      final config = await ref.read(appConfigProvider.future);
 
       final forceUpdated = await _checkForceUpdate(config);
       if (forceUpdated) return;
@@ -78,8 +78,9 @@ class _AppShellState extends ConsumerState<AppShell> {
       final prefs = await SharedPreferences.getInstance();
       final currentId = '${platform}_${update.latestVersion}';
       final savedId = prefs.getString(kUpdateShowCountIdKey);
-      final shownCount =
-          savedId == currentId ? (prefs.getInt(kUpdateShowCountKey) ?? 0) : 0;
+      final shownCount = savedId == currentId
+          ? (prefs.getInt(kUpdateShowCountKey) ?? 0)
+          : 0;
       if (shownCount >= update.show) return false;
     }
 
@@ -99,8 +100,9 @@ class _AppShellState extends ConsumerState<AppShell> {
         final prefs = await SharedPreferences.getInstance();
         final currentId = '${platform}_${update.latestVersion}';
         final savedId = prefs.getString(kUpdateShowCountIdKey);
-        final shownCount =
-            savedId == currentId ? (prefs.getInt(kUpdateShowCountKey) ?? 0) : 0;
+        final shownCount = savedId == currentId
+            ? (prefs.getInt(kUpdateShowCountKey) ?? 0)
+            : 0;
         await prefs.setString(kUpdateShowCountIdKey, currentId);
         await prefs.setInt(kUpdateShowCountKey, shownCount + 1);
       }
@@ -163,7 +165,9 @@ class _AppShellState extends ConsumerState<AppShell> {
   /// 홈 위젯에서 앱 진입 시 'record' 액션이 있으면 기록 화면을 열고 데이터를 갱신한다.
   Future<void> _handleWidgetAction() async {
     try {
-      final action = await _widgetChannel.invokeMethod<String>('getInitialAction');
+      final action = await _widgetChannel.invokeMethod<String>(
+        'getInitialAction',
+      );
       if (action == 'record' && mounted) {
         ref.invalidate(recordFormProvider(null));
         await Navigator.push(

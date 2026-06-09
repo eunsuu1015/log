@@ -40,6 +40,7 @@ class MoodIndicator extends ConsumerWidget {
   final double size;
 
   Color get _dotColor {
+    if (visited == false) return AppTheme.moodNotVisited;
     if (visited != true) return AppTheme.moodNone;
     return switch (mood) {
       MoodLevel.good => AppTheme.moodGood,

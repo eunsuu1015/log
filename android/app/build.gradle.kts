@@ -1,3 +1,4 @@
+import groovy.json.JsonSlurper
 import java.util.Properties
 
 plugins {
@@ -19,6 +20,15 @@ val localProps = Properties().also { props ->
 val keystoreProperties = Properties().also { props ->
     val f = rootProject.file("key.properties")
     if (f.exists()) f.inputStream().use { props.load(it) }
+}
+
+// secrets.json에서 AdMob ID 등을 읽는다 (이 파일은 .gitignore에 포함됨)
+val secretsFile = rootProject.file("secrets.json")
+@Suppress("UNCHECKED_CAST")
+val secrets: Map<String, String> = if (secretsFile.exists()) {
+    JsonSlurper().parseText(secretsFile.readText()) as Map<String, String>
+} else {
+    emptyMap()
 }
 
 android {
@@ -55,9 +65,9 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
-        // admob.app.id가 없으면 Google 테스트 App ID로 폴백
+        // secrets.json에 ADMOB_APP_ID_ANDROID가 없으면 Google 테스트 App ID로 폴백
         manifestPlaceholders["admobAppId"] =
-            localProps["admob.app.id"] ?: "ca-app-pub-3940256099942544~3347511713"
+            secrets["ADMOB_APP_ID_ANDROID"] ?: "ca-app-pub-3940256099942544~3347511713"
     }
 
     buildTypes {

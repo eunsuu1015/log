@@ -31,36 +31,42 @@ import androidx.glance.layout.width
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
+import androidx.glance.currentState
 import androidx.glance.unit.ColorProvider
 import com.tistory.es1015.poopoolog.MainActivity
+import com.tistory.es1015.poopoolog.R
+import es.antonborri.home_widget.HomeWidgetGlanceState
+import es.antonborri.home_widget.HomeWidgetGlanceStateDefinition
 
-private val SURFACE = Color(0xFFFFFBFE.toInt())
-private val COLOR_ON_SURFACE = ColorProvider(Color(0xFF1C1B1F.toInt()))
-private val COLOR_ON_SURFACE_VARIANT = ColorProvider(Color(0xFF49454F.toInt()))
-private val COLOR_PRIMARY = ColorProvider(Color(0xFF2D6A4F.toInt()))
-private val COLOR_ON_PRIMARY = ColorProvider(Color(0xFFFFFFFF.toInt()))
-private val COLOR_MOOD_NONE = Color(0xFF8CA896.toInt())
+// ── 다크·라이트 모드 대응 색상 ────────────────────────────────────────────────
+// Glance 1.0.0은 ColorProvider(day, night) 미지원.
+// values/widget_colors.xml + values-night/widget_colors.xml 리소스로 분기한다.
+private val COLOR_SURFACE             = ColorProvider(R.color.widget_surface)
+private val COLOR_ON_SURFACE          = ColorProvider(R.color.widget_on_surface)
+private val COLOR_ON_SURFACE_VARIANT  = ColorProvider(R.color.widget_on_surface_variant)
+private val COLOR_PRIMARY             = ColorProvider(R.color.widget_primary)
+private val COLOR_ON_PRIMARY          = ColorProvider(R.color.widget_on_primary)
+private val COLOR_MOOD_NONE           = Color(0xFF8CA896)  // AppTheme.moodNone (모드 무관)
 
 class PooPooWidget : GlanceAppWidget() {
+
+    // HomeWidgetGlanceWidgetReceiver.onUpdate가 상태를 갱신하려면 반드시 필요.
+    override val stateDefinition = HomeWidgetGlanceStateDefinition()
 
     companion object {
         private val SMALL = DpSize(57.dp, 57.dp)
         private val MEDIUM = DpSize(120.dp, 57.dp)
-        private val LARGE = DpSize(120.dp, 120.dp)
     }
 
-    override val sizeMode = SizeMode.Responsive(setOf(SMALL, MEDIUM, LARGE))
+    override val sizeMode = SizeMode.Responsive(setOf(SMALL, MEDIUM))
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val prefs = context.getSharedPreferences("HomeWidgetPreferences", Context.MODE_PRIVATE)
-        val data = WidgetDataStore.read(prefs)
         provideContent {
+            val prefs = currentState<HomeWidgetGlanceState>().preferences
+            val data = WidgetDataStore.read(prefs)
             val size = LocalSize.current
-            when {
-                size.height >= 120.dp -> Layout2x2(context, data)
-                size.width >= 120.dp -> Layout2x1(context, data)
-                else -> Layout1x1(context, data)
-            }
+            if (size.width >= 120.dp) Layout2x1(context, data)
+            else Layout1x1(context, data)
         }
     }
 }
@@ -131,16 +137,12 @@ private fun Layout1x1(context: Context, data: WidgetDataStore.WidgetData) {
         modifier = GlanceModifier
             .fillMaxSize()
             .appWidgetBackground()
-            .background(SURFACE)
+            .background(COLOR_SURFACE)
             .cornerRadius(16.dp)
             .clickable(openAppAction(context)),
         contentAlignment = Alignment.Center,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = "오늘",
-                style = TextStyle(fontSize = 9.sp, color = COLOR_ON_SURFACE_VARIANT),
-            )
             if (data.visitCount > 0) {
                 Text(
                     text = "${data.visitCount}회",
@@ -153,10 +155,10 @@ private fun Layout1x1(context: Context, data: WidgetDataStore.WidgetData) {
             } else {
                 Text(
                     text = "안 감",
-                    style = TextStyle(fontSize = 9.sp, color = COLOR_ON_SURFACE_VARIANT),
+                    style = TextStyle(fontSize = 13.sp, color = COLOR_ON_SURFACE_VARIANT),
                 )
             }
-            Spacer(GlanceModifier.height(4.dp))
+            Spacer(GlanceModifier.height(6.dp))
             AddButton(context)
         }
     }
@@ -170,17 +172,13 @@ private fun Layout2x1(context: Context, data: WidgetDataStore.WidgetData) {
         modifier = GlanceModifier
             .fillMaxSize()
             .appWidgetBackground()
-            .background(SURFACE)
+            .background(COLOR_SURFACE)
             .cornerRadius(16.dp)
-            .padding(horizontal = 12.dp)
+            .padding(horizontal = 20.dp)
             .clickable(openAppAction(context)),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(modifier = GlanceModifier.defaultWeight()) {
-            Text(
-                text = "오늘",
-                style = TextStyle(fontSize = 9.sp, color = COLOR_ON_SURFACE_VARIANT),
-            )
+        Column(modifier = GlanceModifier.defaultWeight(), horizontalAlignment = Alignment.CenterHorizontally) {
             if (data.visitCount > 0) {
                 Text(
                     text = "${data.visitCount}회",
@@ -196,14 +194,14 @@ private fun Layout2x1(context: Context, data: WidgetDataStore.WidgetData) {
                         style = TextStyle(fontSize = 11.sp, color = COLOR_ON_SURFACE_VARIANT),
                     )
                     if (data.lastMoodColor.isNotEmpty()) {
-                        Spacer(GlanceModifier.width(6.dp))
+                        Spacer(GlanceModifier.width(8.dp))
                         MoodDot(data.lastMoodColor)
                     }
                 }
             } else {
                 Text(
-                    text = "안 다녀왔어요",
-                    style = TextStyle(fontSize = 11.sp, color = COLOR_ON_SURFACE_VARIANT),
+                    text = "안 다녀옴",
+                    style = TextStyle(fontSize = 13.sp, color = COLOR_ON_SURFACE_VARIANT),
                 )
             }
         }
@@ -212,54 +210,3 @@ private fun Layout2x1(context: Context, data: WidgetDataStore.WidgetData) {
     }
 }
 
-// ── 레이아웃 2×2: 오늘 / N회 / 전체 기록(시간 + 기분도트) / + ─────────────────
-
-@Composable
-private fun Layout2x2(context: Context, data: WidgetDataStore.WidgetData) {
-    Column(
-        modifier = GlanceModifier
-            .fillMaxSize()
-            .appWidgetBackground()
-            .background(SURFACE)
-            .cornerRadius(16.dp)
-            .padding(12.dp)
-            .clickable(openAppAction(context)),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = "오늘",
-                modifier = GlanceModifier.defaultWeight(),
-                style = TextStyle(fontSize = 10.sp, color = COLOR_ON_SURFACE_VARIANT),
-            )
-            AddButton(context)
-        }
-        Spacer(GlanceModifier.height(4.dp))
-        if (data.visitCount > 0) {
-            Text(
-                text = "${data.visitCount}회",
-                style = TextStyle(
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = COLOR_ON_SURFACE,
-                ),
-            )
-            Spacer(GlanceModifier.height(6.dp))
-            data.todayRecords.take(4).forEach { (time, colorHex) ->
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = time,
-                        style = TextStyle(fontSize = 11.sp, color = COLOR_ON_SURFACE_VARIANT),
-                    )
-                    Spacer(GlanceModifier.width(6.dp))
-                    MoodDot(colorHex)
-                }
-                Spacer(GlanceModifier.height(2.dp))
-            }
-        } else {
-            Text(
-                text = "안 다녀왔어요",
-                style = TextStyle(fontSize = 11.sp, color = COLOR_ON_SURFACE_VARIANT),
-            )
-        }
-    }
-}

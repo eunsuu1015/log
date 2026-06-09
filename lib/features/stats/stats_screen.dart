@@ -70,7 +70,16 @@ class StatsScreen extends ConsumerWidget {
     final earliestAsync = ref.watch(earliestEntryDateProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('통계')),
+      appBar: AppBar(
+        title: const Text('통계'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.help_outline),
+            tooltip: '통계 기준 안내',
+            onPressed: () => _showStatsInfoDialog(context),
+          ),
+        ],
+      ),
       body: Column(
         children: [
           _PeriodChips(current: range),
@@ -112,6 +121,31 @@ class StatsScreen extends ConsumerWidget {
             ),
           ),
           const BannerAdWidget(),
+        ],
+      ),
+    );
+  }
+
+  /// 통계 집계 기준을 설명하는 안내 팝업을 표시한다.
+  void _showStatsInfoDialog(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('통계 기준 안내'),
+        content: const Text(
+          '통계에 표시되는 모든 수치는\n'
+          '"화장실에 다녀왔어요"로 체크된\n'
+          '기록만 집계됩니다.\n\n'
+          '"안 다녀왔어요"로 기록하거나\n'
+          '방문 여부를 입력하지 않은 기록은\n'
+          '방문 횟수·기분 분포·시간대 통계에서\n'
+          '모두 제외됩니다.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('확인'),
+          ),
         ],
       ),
     );
@@ -312,15 +346,16 @@ class _StatsBody extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 20),
-        if (result.moodCounts.isNotEmpty) ...[
-          Text(
-            '기분 분포',
-            style: context.tt.titleSmall?.copyWith(fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 4),
-          _MoodDonutChart(moodCounts: result.moodCounts),
-          const SizedBox(height: 20),
-        ],
+        Text(
+          '기분 분포',
+          style: context.tt.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 4),
+        if (result.moodCounts.isNotEmpty)
+          _MoodDonutChart(moodCounts: result.moodCounts)
+        else
+          _MoodNoDataCard(),
+        const SizedBox(height: 20),
         StatHeatMapGrid(hourlyCounts: result.hourlyCounts),
         const SizedBox(height: 16),
       ],
@@ -328,6 +363,41 @@ class _StatsBody extends StatelessWidget {
   }
 }
 
+
+/// 기분 데이터 없을 때 표시하는 안내 카드.
+class _MoodNoDataCard extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final cs = context.cs;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHighest.withValues(alpha: 0.4),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        children: [
+          Icon(Icons.sentiment_neutral_outlined, size: 32, color: cs.outlineVariant),
+          const SizedBox(height: 8),
+          Text(
+            '기분을 입력한 기록이 없어요',
+            style: context.tt.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: cs.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '기록 시 기분을 선택하면 분포를 확인할 수 있어요',
+            style: context.tt.bodySmall?.copyWith(color: cs.outlineVariant),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class _StatsEmptyState extends StatelessWidget {
   const _StatsEmptyState();

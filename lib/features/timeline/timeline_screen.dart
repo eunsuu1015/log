@@ -2,6 +2,7 @@
 // 전체 기록을 최신순·날짜별 그룹으로 표시하고 기분 필터를 제공한다.
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:poopoolog/core/ads/native_ad_widget.dart';
 import 'package:poopoolog/features/timeline/timeline_provider.dart';
@@ -9,10 +10,11 @@ import 'package:poopoolog/features/timeline/widgets/date_header.dart';
 import 'package:poopoolog/features/timeline/widgets/filter_chip_row.dart';
 import 'package:poopoolog/shared/widgets/entry_card.dart';
 
-
 import '../../core/database/app_database.dart';
+import '../../core/debug/debug_flags.dart';
 import '../../shared/theme/app_theme.dart';
 import '../calendar/calendar_provider.dart';
+import '../record/record_provider.dart';
 import '../record/record_screen.dart';
 import '../stats/stats_provider.dart';
 
@@ -28,6 +30,14 @@ class TimelineScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('타임라인'),
+        actions: [
+          if (kDebugShowAdIds)
+            IconButton(
+              icon: const Icon(Icons.info_outline),
+              tooltip: 'AdMob IDs',
+              onPressed: () => _showAdIdsDialog(context),
+            ),
+        ],
       ),
       body: Column(
         children: [
@@ -78,9 +88,72 @@ class TimelineScreen extends ConsumerWidget {
     );
   }
 
+  /// AdMob App ID 및 광고 단위 ID 전체(Android·iOS)를 AlertDialog로 표시한다.
+  Future<void> _showAdIdsDialog(BuildContext context) async {
+    const channel = MethodChannel('com.tistory.es1015.poopoolog/widget');
+    String appId = '(읽는 중...)';
+    try {
+      appId = await channel.invokeMethod<String>('getAdmobAppId') ?? '(없음)';
+    } catch (_) {
+      appId = '(읽기 실패)';
+    }
+    if (!context.mounted) return;
+
+    const bannerA = String.fromEnvironment(
+      'ADMOB_BANNER_ANDROID',
+      defaultValue: '조회 실패',
+    );
+    const interstitialA = String.fromEnvironment(
+      'ADMOB_INTERSTITIAL_ANDROID',
+      defaultValue: '조회 실패',
+    );
+    const nativeA = String.fromEnvironment(
+      'ADMOB_NATIVE_ANDROID',
+      defaultValue: '조회 실패',
+    );
+    const bannerI = String.fromEnvironment(
+      'ADMOB_BANNER_IOS',
+      defaultValue: '조회 실패',
+    );
+    const interstitialI = String.fromEnvironment(
+      'ADMOB_INTERSTITIAL_IOS',
+      defaultValue: '조회 실패',
+    );
+    const nativeI = String.fromEnvironment(
+      'ADMOB_NATIVE_IOS',
+      defaultValue: '조회 실패',
+    );
+    showDialog<void>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('AdMob IDs'),
+        content: Text(
+          '[App ID]\n'
+          'Android: $appId\n\n'
+          '[Android]\n'
+          'BANNER: $bannerA\n'
+          'INTERSTITIAL: $interstitialA\n'
+          'NATIVE: $nativeA\n\n'
+          '[테스트용]\n'
+          'BANNER: $bannerI\n'
+          'INTERSTITIAL: $interstitialI\n'
+          'NATIVE: $nativeI',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('확인'),
+          ),
+        ],
+      ),
+    );
+  }
+
   /// 기록 생성(entry == null) 또는 수정(entry != null) 화면을 열고
   /// 닫힌 뒤 목록을 갱신한다.
+  /// 신규 생성 시 이전 입력 내용이 남지 않도록 폼 상태를 초기화한다.
   void _openRecord(BuildContext context, WidgetRef ref, {Entry? entry}) {
+    if (entry == null) ref.invalidate(recordFormProvider(null));
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -197,10 +270,7 @@ class _TimelineListState extends ConsumerState<_TimelineList> {
           return Padding(
             padding: const EdgeInsets.symmetric(vertical: 20),
             child: Center(
-              child: Text(
-                '모든 기록을 불러왔어요',
-                style: context.tt.bodySmall,
-              ),
+              child: Text('모든 기록을 불러왔어요', style: context.tt.bodySmall),
             ),
           );
         }
@@ -287,7 +357,9 @@ class _TimelineNewUserEmptyState extends StatelessWidget {
             const SizedBox(height: 20),
             Text(
               '아직 기록이 없어요',
-              style: context.tt.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
+              style: context.tt.bodyLarge?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),

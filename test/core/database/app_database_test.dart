@@ -147,4 +147,191 @@ void main() {
       expect(newId, 1);
     });
   });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // insertEntry()
+  // ─────────────────────────────────────────────────────────────────────────
+
+  group('insertEntry()', () {
+    late AppDatabase db;
+    setUp(() => db = _makeDb());
+    tearDown(() => db.close());
+
+    test('삽입 후 조회하면 동일 행이 반환된다', () async {
+      final t = DateTime(2026, 3, 15, 9, 0);
+      final id = await db.insertEntry(
+        EntriesCompanion(
+          recordedAt: Value(t),
+          visited: const Value(true),
+          mood: const Value(0),
+          memo: const Value('테스트'),
+        ),
+      );
+      final rows = await db.getEntriesInRange(DateTime(2000), DateTime(2200));
+      expect(rows.length, 1);
+      expect(rows.first.id, id);
+      expect(rows.first.visited, true);
+      expect(rows.first.mood, 0);
+      expect(rows.first.memo, '테스트');
+    });
+
+    test('반환된 id는 1 이상의 정수', () async {
+      final id = await _insert(db);
+      expect(id, greaterThanOrEqualTo(1));
+    });
+
+    test('여러 건 삽입 시 id가 순증가한다', () async {
+      final id1 = await _insert(db, recordedAt: DateTime(2026, 1, 1));
+      final id2 = await _insert(db, recordedAt: DateTime(2026, 1, 2));
+      expect(id2, greaterThan(id1));
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // updateEntry()
+  // ─────────────────────────────────────────────────────────────────────────
+
+  group('updateEntry()', () {
+    late AppDatabase db;
+    setUp(() => db = _makeDb());
+    tearDown(() => db.close());
+
+    test('기존 행을 수정하면 변경된 값이 조회된다', () async {
+      final id = await db.insertEntry(
+        EntriesCompanion(
+          recordedAt: Value(DateTime(2026, 3, 1, 9, 0)),
+          visited: const Value(true),
+          mood: const Value(0),
+          memo: const Value('원본'),
+        ),
+      );
+      await db.updateEntry(
+        EntriesCompanion(
+          id: Value(id),
+          recordedAt: Value(DateTime(2026, 3, 1, 9, 0)),
+          visited: const Value(false),
+          mood: const Value(2),
+          memo: const Value('수정됨'),
+        ),
+      );
+      final rows = await db.getEntriesInRange(DateTime(2000), DateTime(2200));
+      expect(rows.length, 1);
+      expect(rows.first.visited, false);
+      expect(rows.first.mood, 2);
+      expect(rows.first.memo, '수정됨');
+    });
+
+    test('수정 성공 시 true 반환', () async {
+      final id = await _insert(db);
+      final result = await db.updateEntry(
+        EntriesCompanion(
+          id: Value(id),
+          recordedAt: Value(DateTime.now()),
+          visited: const Value(true),
+        ),
+      );
+      expect(result, isTrue);
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // deleteEntry()
+  // ─────────────────────────────────────────────────────────────────────────
+
+  group('deleteEntry()', () {
+    late AppDatabase db;
+    setUp(() => db = _makeDb());
+    tearDown(() => db.close());
+
+    test('삽입 후 삭제하면 목록에서 제거된다', () async {
+      final id = await _insert(db);
+      await db.deleteEntry(id);
+      final rows = await db.getEntriesInRange(DateTime(2000), DateTime(2200));
+      expect(rows, isEmpty);
+    });
+
+    test('삭제 성공 시 반환값 1', () async {
+      final id = await _insert(db);
+      final count = await db.deleteEntry(id);
+      expect(count, 1);
+    });
+
+    test('존재하지 않는 id 삭제 시 반환값 0', () async {
+      final count = await db.deleteEntry(9999);
+      expect(count, 0);
+    });
+
+    test('2건 중 1건 삭제 후 나머지 1건 유지', () async {
+      final id1 = await _insert(db, recordedAt: DateTime(2026, 1, 1));
+      await _insert(db, recordedAt: DateTime(2026, 1, 2));
+      await db.deleteEntry(id1);
+      final rows = await db.getEntriesInRange(DateTime(2000), DateTime(2200));
+      expect(rows.length, 1);
+      expect(rows.first.id, isNot(id1));
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // getEntriesInRange() — 경계값
+  // ─────────────────────────────────────────────────────────────────────────
+
+  group('getEntriesInRange() — 경계값', () {
+    late AppDatabase db;
+    setUp(() => db = _makeDb());
+    tearDown(() => db.close());
+
+    test('from 경계: recordedAt == from 이면 포함된다', () async {
+      final from = DateTime(2026, 5, 1, 0, 0);
+      await db.insertEntry(EntriesCompanion(recordedAt: Value(from)));
+      final rows = await db.getEntriesInRange(from, DateTime(2026, 5, 2));
+      expect(rows.length, 1);
+    });
+
+    test('to 경계: recordedAt == to 이면 제외된다 (exclusive end)', () async {
+      final to = DateTime(2026, 5, 2, 0, 0);
+      await db.insertEntry(EntriesCompanion(recordedAt: Value(to)));
+      final rows = await db.getEntriesInRange(DateTime(2026, 5, 1), to);
+      expect(rows, isEmpty);
+    });
+
+    test('to 바로 1초 전은 포함된다', () async {
+      final justBefore = DateTime(2026, 5, 1, 23, 59, 59);
+      final to = DateTime(2026, 5, 2, 0, 0);
+      await db.insertEntry(EntriesCompanion(recordedAt: Value(justBefore)));
+      final rows = await db.getEntriesInRange(DateTime(2026, 5, 1), to);
+      expect(rows.length, 1);
+    });
+
+    test('from 1초 전은 제외된다', () async {
+      final justBefore = DateTime(2026, 4, 30, 23, 59, 59);
+      final from = DateTime(2026, 5, 1, 0, 0);
+      await db.insertEntry(EntriesCompanion(recordedAt: Value(justBefore)));
+      final rows = await db.getEntriesInRange(from, DateTime(2026, 5, 2));
+      expect(rows, isEmpty);
+    });
+
+    test('범위 밖 기록은 반환되지 않는다', () async {
+      await _insert(db, recordedAt: DateTime(2026, 3, 1)); // 범위 전
+      await _insert(db, recordedAt: DateTime(2026, 5, 15)); // 범위 내
+      await _insert(db, recordedAt: DateTime(2026, 7, 1)); // 범위 후
+      final rows = await db.getEntriesInRange(
+        DateTime(2026, 5, 1),
+        DateTime(2026, 6, 1),
+      );
+      expect(rows.length, 1);
+    });
+
+    test('반환 결과는 recordedAt 오름차순', () async {
+      await _insert(db, recordedAt: DateTime(2026, 5, 3));
+      await _insert(db, recordedAt: DateTime(2026, 5, 1));
+      await _insert(db, recordedAt: DateTime(2026, 5, 2));
+      final rows = await db.getEntriesInRange(
+        DateTime(2026, 5, 1),
+        DateTime(2026, 5, 4),
+      );
+      expect(rows[0].recordedAt.day, 1);
+      expect(rows[1].recordedAt.day, 2);
+      expect(rows[2].recordedAt.day, 3);
+    });
+  });
 }

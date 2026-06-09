@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 
@@ -12,6 +13,8 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/database/app_database.dart';
 import '../../core/database/database_provider.dart';
+import '../../core/debug/debug_flags.dart';
+import '../../core/remote_config/remote_config_service.dart';
 import '../../shared/theme/app_theme.dart';
 import '../../core/iap/iap_provider.dart';
 import '../../core/models/mood_display_provider.dart';
@@ -25,6 +28,10 @@ import '../timeline/timeline_provider.dart';
 // ---------------------------------------------------------------------------
 // Providers
 // ---------------------------------------------------------------------------
+
+const _kAndroidStoreUrl =
+    'https://play.google.com/store/apps/details?id=com.tistory.es1015.poopoolog';
+const _kIosStoreUrl = 'https://apps.apple.com/app/id000000000';
 
 /// SharedPreferences 저장 키
 const kThemeModeKey = 'theme_mode';
@@ -92,13 +99,16 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
       } else if (next == IAPStatus.canceled) {
         // 구매 취소 — 조용히 idle로 복귀 (스낵바 없음)
         ref.read(purchaseNotifierProvider.notifier).clearCanceled();
-      } else if (prev == IAPStatus.loading &&
-          next == IAPStatus.idle &&
-          !ref.read(adsRemovedProvider)) {
-        // restore() 완료 후 복원할 내역이 없는 경우
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('이전 구매 내역을 찾을 수 없어요.')),
-        );
+      } else if (prev == IAPStatus.loading && next == IAPStatus.idle) {
+        if (ref.read(adsRemovedProvider)) {
+          // 구매 또는 복원 성공 → 팝업
+          _showPurchaseSuccessDialog();
+        } else {
+          // restore() 완료 후 복원할 내역이 없는 경우
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('이전 구매 내역을 찾을 수 없어요.')));
+        }
       }
     });
   }
@@ -111,6 +121,12 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
     final adsRemoved = ref.watch(adsRemovedProvider);
     final iapStatus = ref.watch(purchaseNotifierProvider);
     final versionAsync = ref.watch(_appVersionProvider);
+    final configAsync = ref.watch(appConfigProvider);
+    final config = configAsync.valueOrNull;
+    final version = versionAsync.valueOrNull;
+    final isOutdated = config != null && version != null
+        ? (Platform.isIOS ? config.ios : config.android).isOutdated(version)
+        : false;
 
     final cs = Theme.of(context).colorScheme;
 
@@ -235,6 +251,14 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
           const _SectionTitle(label: '정보'),
           _SectionCard(
             children: [
+              if (config != null && !config.notice.isEmpty) ...[
+                _SettingsTile(
+                  icon: Icons.campaign_outlined,
+                  title: '공지사항',
+                  onTap: () => _showNoticeDialog(config.notice.title, config.notice.message),
+                ),
+                const Divider(height: 1, indent: 52),
+              ],
               _SettingsTile(
                 icon: Icons.privacy_tip_outlined,
                 title: '개인정보처리방침',
@@ -254,18 +278,37 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
               _SettingsTile(
                 icon: Icons.info_outline,
                 title: '앱 버전',
-                trailing: Text(
-                  versionAsync.when(
-                    data: (v) => 'v $v',
-                    loading: () => '-',
-                    error: (_, __) => '-',
-                  ),
-                  style: context.tt.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w400,
-                    color: Colors.grey,
-                  ),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      version != null ? 'v $version' : '-',
+                      style: context.tt.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w400,
+                        color: Colors.grey,
+                      ),
+                    ),
+                    if (isOutdated) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: cs.primaryContainer,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          '업데이트',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: cs.primary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
-                onTap: _onVersionTap,
+                onTap: isOutdated ? _launchStore : _onVersionTap,
               ),
             ],
           ),
@@ -278,6 +321,38 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
   // ---------------------------------------------------------------------------
   // 설정 피커
   // ---------------------------------------------------------------------------
+
+  /// 공지사항 내용을 확인 버튼만 있는 일반 다이얼로그로 표시한다.
+  void _showNoticeDialog(String title, String message) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(title),
+        content: Text(
+          message,
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+            height: 1.6,
+          ),
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('확인'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 플랫폼별 앱 스토어로 이동한다.
+  Future<void> _launchStore() async {
+    final url = Platform.isIOS ? _kIosStoreUrl : _kAndroidStoreUrl;
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
 
   void _showBottomSheet(Widget Function(BuildContext) builder) {
     showModalBottomSheet(
@@ -346,9 +421,11 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
     required String content,
     String confirmLabel = '확인',
     bool isDestructive = false,
+    bool isBarrierDismissible = true,
   }) async {
     final confirmed = await showDialog<bool>(
       context: context,
+      barrierDismissible: isBarrierDismissible,
       builder: (ctx) => AlertDialog(
         title: Text(title),
         content: Text(content),
@@ -388,6 +465,23 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
     );
   }
 
+  /// 인앱결제(광고 제거) 구매 또는 복원 성공 시 결과를 팝업으로 알린다.
+  void _showPurchaseSuccessDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('구매 완료'),
+        content: const Text('광고가 제거됐어요!\n앞으로 광고 없이 앱을 이용하실 수 있어요.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('확인'),
+          ),
+        ],
+      ),
+    );
+  }
+
   // ---------------------------------------------------------------------------
   // CSV 내보내기
   // ---------------------------------------------------------------------------
@@ -421,7 +515,11 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
     final ts =
         '${now.year}'
         '${now.month.toString().padLeft(2, '0')}'
-        '${now.day.toString().padLeft(2, '0')}';
+        '${now.day.toString().padLeft(2, '0')}'
+        '_'
+        '${now.hour.toString().padLeft(2, '0')}'
+        '${now.minute.toString().padLeft(2, '0')}'
+        '${now.second.toString().padLeft(2, '0')}';
     final bytes = utf8.encode(buffer.toString());
 
     // 사용자가 내 파일 앱에서 저장 위치를 직접 선택한다.
@@ -459,9 +557,9 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
     final name = result.files.first.name.toLowerCase();
     if (!name.endsWith('.csv')) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('CSV 파일만 가져올 수 있어요')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('CSV 파일만 가져올 수 있어요')));
       return;
     }
 
@@ -512,6 +610,7 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
           '기존 기록은 삭제되지 않아요.\n\n'
           '계속하시겠어요?',
       confirmLabel: '가져오기',
+      isBarrierDismissible: false,
     );
     if (!confirmed) return;
 
@@ -534,7 +633,8 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
 
     // 7. 행별 upsert
     final db = ref.read(appDatabaseProvider);
-    var importCount = 0;
+    var newAddedCount = 0;
+    var overwrittenCount = 0;
     var errorCount = 0;
 
     for (int i = 1; i < lines.length; i++) {
@@ -558,7 +658,7 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
         final mood = moodRaw == null ? null : int.tryParse(moodRaw);
         final memo = getField(fields, 'memo');
 
-        await db.upsertEntryByTime(
+        final isNewData = await db.upsertEntryByTime(
           EntriesCompanion(
             recordedAt: Value(recordedAt),
             visited: Value(visited),
@@ -566,7 +666,11 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
             memo: Value(memo),
           ),
         );
-        importCount++;
+        if (isNewData) {
+          newAddedCount++;
+        } else {
+          overwrittenCount++;
+        }
       } catch (_) {
         errorCount++;
       }
@@ -576,14 +680,37 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
 
     if (!mounted) return;
     Navigator.pop(context);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          '$importCount개 기록을 가져왔어요'
-          '${errorCount > 0 ? ' ($errorCount개 오류)' : ''}',
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => PopScope(
+        canPop: false,
+        child: AlertDialog(
+          title: const Text('데이터 가져오기 완료'),
+          content: Text(
+            '중복된 \'$overwrittenCount개\' 기록을 제외하고,'
+            '\n$newAddedCount개\' 기록을 가져왔어요.'
+            '${errorCount > 0 ? '\n($errorCount개 오류 발생)' : ''}',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('확인'),
+            ),
+          ],
         ),
       ),
     );
+
+    // ScaffoldMessenger.of(context).showSnackBar(
+    //   SnackBar(
+    //     content: Text(
+    //       '중복된 \'$overwrittenCount개\' 기록을 제외하고, \'$newAddedCount개\' 기록을 가져왔어요.'
+    //       '${errorCount > 0 ? ' ($errorCount개 오류)' : ''}',
+    //     ),
+    //   ),
+    // );
   }
 
   // ---------------------------------------------------------------------------
@@ -670,17 +797,19 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
   }
 
   void _onVersionTap() {
-    _versionTapCount++;
-    if (_versionTapCount >= 5) {
-      _versionTapCount = 0;
-      _confirmGenerateTestData();
+    if (kAppVersionAddData) {
+      _versionTapCount++;
+      if (_versionTapCount >= 11) {
+        _versionTapCount = 0;
+        _confirmGenerateTestData();
+      }
     }
   }
 
   Future<void> _confirmGenerateTestData() async {
     final confirmed = await _showConfirmDialog(
       title: '테스트 데이터 추가',
-      content: '2025년 10월부터 오늘까지\n랜덤 기록을 추가할까요?',
+      content: '2026년 5월부터 오늘까지\n랜덤 기록을 추가할까요?',
       confirmLabel: '추가',
     );
     if (!confirmed || !mounted) return;
@@ -716,7 +845,7 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
       '딱딱함',
     ];
 
-    final start = DateTime(2025, 10, 1);
+    final start = DateTime(2026, 5, 1);
     final today = DateTime.now();
 
     var day = start;

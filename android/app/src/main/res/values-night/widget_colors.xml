@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 홈 위젯 다크 모드 색상 — AppTheme 색상표와 동기화 -->
+<resources>
+    <color name="widget_surface">#171D18</color>
+    <color name="widget_on_surface">#DDE7DF</color>
+    <color name="widget_on_surface_variant">#9DB5A5</color>
+    <color name="widget_primary">#74C19A</color>
+    <color name="widget_on_primary">#07301C</color>
+</resources>

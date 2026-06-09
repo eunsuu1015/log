@@ -2,6 +2,92 @@
 
 ---
 
+### [2026-06-09] UI 개선 및 버그 수정 다수
+- **변경 사항:**
+  - **Android 홈 화면 위젯**
+    - 2×1 위젯 텍스트 중앙 정렬 적용
+    - 양쪽 가로 패딩 12dp → 20dp 확대
+    - "오늘" 문구 제거 (위젯 자체가 오늘 데이터만 표시하므로 중복)
+    - `PooPooWidget`에 `HomeWidgetGlanceStateDefinition` 적용 — 기록 저장 후 위젯 데이터가 갱신되지 않던 버그 수정 (stateDefinition 미설정으로 `HomeWidgetGlanceWidgetReceiver.onUpdate`의 상태 갱신 로직이 건너뛰어졌던 문제)
+    - `HomeWidgetService`에서 존재하지 않는 `_receiverLarge` 참조 제거
+  - **색상 구분 — 안 감 / 다녀옴**
+    - `AppTheme.moodNotVisited(#C4CCCA)` 신규 색상 추가
+    - `EntryX.moodColor`: `visited=false`이면 `moodNotVisited`, `visited=true+mood=null`이면 `moodNone`으로 분리
+    - `MoodIndicator._dotColor`, `MoodFacePainter._FaceColors.forMood` 동일하게 분기 처리 — 도트·얼굴 아이콘 모드 모두 적용
+  - **온보딩 가이드 화면**
+    - 1페이지 "화장실에 다녀왔어요" 스위치를 기록 화면과 동일한 활성화 색상으로 표시 (`IgnorePointer` + enabled 상태)
+  - **더보기 화면**
+    - "정보" 섹션에 공지사항 항목 추가 — Remote Config 공지가 있을 때만 노출, 탭 시 확인 버튼만 있는 일반 팝업 표시
+    - 앱 버전 항목에 업데이트 인디케이터 추가 — 최신 버전 아닐 시 "업데이트" 칩 표시 및 탭 시 스토어 이동
+    - `appConfigProvider` 신규 추가 — Remote Config 결과를 AppShell·MoreScreen이 공유해 중복 fetch 방지
+  - **통계 화면**
+    - "기분 분포" 섹션 항상 표시 — 기분 입력 기록이 없을 때 차트 대신 안내 카드 표시
+    - 피크 타임 다중 칩 배경색 하드코딩(`#E6F1FB`) → `cs.primaryContainer` 교체 (다크모드 미적용 버그 수정)
+  - **타임라인 화면**
+    - 신규 기록 화면 진입 시 이전 폼 상태(기분·날짜·시간) 유지되던 버그 수정 — `recordFormProvider(null)` invalidate 추가
+  - **QA 체크리스트** (`docs/qa_checklist.md`) 현재 코드 기준으로 업데이트
+    - 위젯 2×2 항목 제거, "오늘" 문구 반영, 전면 광고 횟수 정정 (10회 최초 + 이후 7회마다)
+- **영향받는 파일:**
+  - 수정 - `android/.../PooPooWidget.kt` — stateDefinition, currentState() 적용, "오늘" 제거, 중앙 정렬, 패딩 조정
+  - 수정 - `android/.../PooPooWidgetMediumReceiver.kt` — 주석 정리
+  - 수정 - `lib/core/widget/home_widget_service.dart` — _receiverLarge 제거
+  - 수정 - `lib/shared/theme/app_theme.dart` — moodNotVisited 색상 추가, moodNone 주석 수정
+  - 수정 - `lib/core/extensions/entry_ext.dart` — moodColor 분기 수정
+  - 수정 - `lib/shared/widgets/mood_indicator.dart` — _dotColor 분기 수정
+  - 수정 - `lib/shared/widgets/mood_face_painter.dart` — forMood() 분기 수정
+  - 수정 - `lib/features/onboarding/onboarding_screen.dart` — 스위치 색상 수정
+  - 수정 - `lib/features/more/more_screen.dart` — 공지사항 타일·업데이트 인디케이터 추가
+  - 수정 - `lib/core/remote_config/remote_config_service.dart` — appConfigProvider 추가
+  - 수정 - `lib/features/shell/app_shell.dart` — appConfigProvider 사용
+  - 수정 - `lib/features/stats/stats_screen.dart` — 기분 분포 빈 상태 카드 추가
+  - 수정 - `lib/features/stats/widgets/stat_heat_map_grid.dart` — 피크 칩 배경색 테마 적용
+  - 수정 - `lib/features/timeline/timeline_screen.dart` — 신규 기록 시 폼 초기화
+  - 수정 - `docs/qa_checklist.md` — 현행화
+- **특이사항 및 남은 작업:**
+  - 위젯 업데이트 버그 수정은 빌드 후 실제 기기 검증 필요
+  - iOS 스토어 URL (`_kIosStoreUrl`)은 App Store 등록 후 실제 ID로 교체 필요
+
+---
+
+### [2026-06-04] 빠진 단위 테스트 3종 추가
+- **변경 사항:**
+    - timeline_provider.dart `_toGroups` 순수 로직을 `@visibleForTesting static buildGroupsForTest()`로 노출, 13개 순수 단위 테스트 신규 작성
+    - app_database_test.dart에 `insertEntry` / `updateEntry` / `deleteEntry` / `getEntriesInRange` 경계값(exclusive end) 테스트 15개 추가
+    - stats_screen_test.dart에 `_PeakTimeSummary` 데이터 부족 분기 (`maxCount==1 && peakHours.length>1`) 위젯 테스트 3개 추가
+    - 총 62개 테스트 ALL PASSED
+- **영향받는 파일:**
+    - 수정 - lib/features/timeline/timeline_provider.dart — `_toGroups` static 전환, `buildGroupsForTest` 공개 메서드 추가
+    - 신규 생성 - test/features/timeline/timeline_provider_test.dart — 필터·그룹화 순수 단위 테스트 (13개)
+    - 수정 - test/core/database/app_database_test.dart — CRUD 및 범위 경계값 테스트 추가 (15개)
+    - 수정 - test/features/stats/stats_screen_test.dart — _PeakTimeSummary 위젯 분기 테스트 추가 (3개)
+- **특이사항 및 남은 작업:**
+    - 없음
+
+---
+
+### [2026-06-03] 홈화면 위젯 추가 불가 버그 수정
+- **변경 사항:**
+    - 매니페스트에 선언되어 있으나 클래스 파일이 없던 `PooPooWidgetMediumReceiver`, `PooPooWidgetLargeReceiver` 생성
+    - 이로 인해 홈화면 위젯 갤러리에서 2×1, 2×2 위젯 추가 시 발생하던 "위젯을 추가할 수 없습니다" 오류 해결
+- **영향받는 파일:**
+    - 신규 생성 - android/.../widget/PooPooWidgetMediumReceiver.kt — 2×1 위젯 리시버
+    - 신규 생성 - android/.../widget/PooPooWidgetLargeReceiver.kt — 2×2 위젯 리시버
+- **특이사항 및 남은 작업:**
+    - 세 리시버 모두 동일한 `PooPooWidget`(SizeMode.Responsive) 사용, 컨테이너 크기에 따라 레이아웃 자동 전환
+
+---
+
+### [2026-06-03] 인앱결제 성공 팝업 변경 + 빌드 캐시 정리
+- **변경 사항:**
+    - 더보기 화면에서 광고 제거 인앱결제(구매 또는 복원) 성공 시 스낵바 대신 AlertDialog 팝업으로 결과 표시
+    - `flutter clean` 으로 빌드 캐시 정리 (AAPT 리소스 링크 오류 해결)
+- **영향받는 파일:**
+    - 수정 - lib/features/more/more_screen.dart — `listenManual` 성공 분기에 `_showPurchaseSuccessDialog()` 호출 추가, `_showPurchaseSuccessDialog` 메서드 신규 추가
+- **특이사항 및 남은 작업:**
+    - 컴파일 오류(string/app_name, xml/poopoo_widget_info_medium 등)는 stale 빌드 캐시 문제였으며 `flutter clean && flutter pub get`으로 해결됨
+
+---
+
 ### [2026-06-03] 캘린더 날짜 선택 동작 통일 / 통계 피크 타임 데이터 부족 케이스 처리
 
 - **변경 사항:**

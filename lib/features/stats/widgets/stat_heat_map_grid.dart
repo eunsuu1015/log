@@ -253,7 +253,6 @@ class StatHeatMapGrid extends StatelessWidget {
 // 피크 시간 요약
 // ---------------------------------------------------------------------------
 
-const _kChipBg = Color(0xFFE6F1FB);
 
 /// 히트맵 헤더 아래에 표시되는 피크 시간대 요약 카드.
 /// 단일 피크·2개 동률·3개 이상 동률 케이스를 구분해 렌더링한다.
@@ -375,7 +374,7 @@ class _MultiPeak extends StatelessWidget {
   Widget _chip(int hour) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
     decoration: BoxDecoration(
-      color: _kChipBg,
+      color: cs.primaryContainer,
       borderRadius: BorderRadius.circular(8),
     ),
     child: Row(
@@ -419,7 +418,7 @@ class _MultiPeak extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: _kChipBg,
+              color: cs.primaryContainer,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
