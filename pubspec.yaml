@@ -48,6 +48,7 @@ dependencies:
 
   # 홈 화면 위젯
   home_widget: ^0.9.1
+  flutter_slidable: ^4.0.3
 
   # 알림
 #  flutter_local_notifications: ^17.2.2

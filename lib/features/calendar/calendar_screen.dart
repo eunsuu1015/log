@@ -14,8 +14,12 @@ import 'package:poopoolog/features/timeline/timeline_provider.dart';
 import 'package:poopoolog/shared/theme/app_theme.dart';
 import 'package:table_calendar/table_calendar.dart';
 
+import 'package:drift/drift.dart' show Value;
+
 import '../../core/database/app_database.dart';
+import '../../core/database/database_provider.dart';
 import '../../shared/widgets/entry_card.dart';
+import '../stats/stats_provider.dart';
 
 /// 캘린더가 이동할 수 있는 가장 이른 날. 피커 minDate와 반드시 일치해야 한다.
 final _kCalendarFirstDay = DateTime(2026, 5, 1);
@@ -124,6 +128,8 @@ class CalendarScreen extends ConsumerWidget {
               onAddEntry: (day) => _openRecordScreen(context, ref, day),
               onEditEntry: (entry) =>
                   _openRecordScreen(context, ref, null, existingEntry: entry),
+              onDeleteEntry: (entry) =>
+                  _deleteEntry(context, ref, entry),
             ),
       floatingActionButton: FloatingActionButton(
         heroTag: 'fab_calendar',
@@ -132,6 +138,53 @@ class CalendarScreen extends ConsumerWidget {
         child: const Icon(Icons.add),
       ),
     );
+  }
+
+  /// DB에서 기록을 삭제하고, 하단 SnackBar로 '복구하기' 옵션을 5초간 제공한다.
+  Future<void> _deleteEntry(
+    BuildContext context,
+    WidgetRef ref,
+    Entry entry,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final db = ref.read(appDatabaseProvider);
+    await db.deleteEntry(entry.id);
+    _invalidateAll(ref);
+
+    messenger.clearSnackBars();
+    messenger.showSnackBar(
+      SnackBar(
+        content: const Text('삭제되었습니다.'),
+        duration: const Duration(seconds: 5),
+        action: SnackBarAction(
+          label: '복구하기',
+          onPressed: () => _undoDelete(ref, entry),
+        ),
+      ),
+    );
+  }
+
+  /// 삭제된 기록을 동일한 데이터로 재삽입해 복구한다.
+  Future<void> _undoDelete(WidgetRef ref, Entry entry) async {
+    final db = ref.read(appDatabaseProvider);
+    await db.insertEntry(
+      EntriesCompanion(
+        recordedAt: Value(entry.recordedAt),
+        visited: Value(entry.visited),
+        mood: Value(entry.mood),
+        memo: Value(entry.memo),
+      ),
+    );
+    _invalidateAll(ref);
+  }
+
+  /// 캘린더·타임라인·통계·최초기록일 Provider를 일괄 무효화한다.
+  void _invalidateAll(WidgetRef ref) {
+    final month = ref.read(calendarFocusedMonthProvider);
+    ref.invalidate(monthlyEntriesProvider(month));
+    ref.invalidate(timelineProvider);
+    ref.invalidate(statsResultProvider);
+    ref.invalidate(earliestEntryDateProvider);
   }
 
   /// 기록 생성/수정 화면을 열고 닫힌 뒤 캘린더·타임라인·통계를 갱신한다.
@@ -193,6 +246,7 @@ class _CalendarBody extends StatelessWidget {
   final VoidCallback onMonthPickerTap;
   final void Function(DateTime) onAddEntry;
   final void Function(Entry) onEditEntry;
+  final void Function(Entry) onDeleteEntry;
 
   const _CalendarBody({
     required this.focusedMonth,
@@ -204,6 +258,7 @@ class _CalendarBody extends StatelessWidget {
     required this.onMonthPickerTap,
     required this.onAddEntry,
     required this.onEditEntry,
+    required this.onDeleteEntry,
   });
 
   List<Entry> _entriesForDay(DateTime day) {
@@ -357,6 +412,7 @@ class _CalendarBody extends StatelessWidget {
             entries: selectedEntries,
             onAddEntry: () => onAddEntry(selectedDay!),
             onEditEntry: onEditEntry,
+            onDeleteEntry: onDeleteEntry,
           ),
         ],
       ],
@@ -440,12 +496,14 @@ class _DayPanel extends StatelessWidget {
   final List<Entry> entries;
   final VoidCallback onAddEntry;
   final void Function(Entry) onEditEntry;
+  final void Function(Entry) onDeleteEntry;
 
   const _DayPanel({
     required this.date,
     required this.entries,
     required this.onAddEntry,
     required this.onEditEntry,
+    required this.onDeleteEntry,
   });
 
   @override
@@ -489,6 +547,7 @@ class _DayPanel extends StatelessWidget {
                     itemBuilder: (_, i) => EntryCard(
                       entry: entries[i],
                       onTap: () => onEditEntry(entries[i]),
+                      onDelete: () => onDeleteEntry(entries[i]),
                     ),
                   ),
           ),

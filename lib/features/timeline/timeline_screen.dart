@@ -10,7 +10,10 @@ import 'package:poopoolog/features/timeline/widgets/date_header.dart';
 import 'package:poopoolog/features/timeline/widgets/filter_chip_row.dart';
 import 'package:poopoolog/shared/widgets/entry_card.dart';
 
+import 'package:drift/drift.dart' show Value;
+
 import '../../core/database/app_database.dart';
+import '../../core/database/database_provider.dart';
 import '../../core/debug/debug_flags.dart';
 import '../../shared/theme/app_theme.dart';
 import '../calendar/calendar_provider.dart';
@@ -210,6 +213,49 @@ class _TimelineListState extends ConsumerState<_TimelineList> {
     }
   }
 
+  /// DB에서 기록을 삭제하고, 하단 SnackBar로 '복구하기' 옵션을 5초간 제공한다.
+  Future<void> _deleteEntry(Entry entry) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final db = ref.read(appDatabaseProvider);
+    await db.deleteEntry(entry.id);
+    _invalidateAll();
+
+    messenger.clearSnackBars();
+    messenger.showSnackBar(
+      SnackBar(
+        content: const Text('삭제되었습니다.'),
+        duration: const Duration(seconds: 5),
+        action: SnackBarAction(
+          label: '복구하기',
+          onPressed: () => _undoDelete(entry),
+        ),
+      ),
+    );
+  }
+
+  /// 삭제된 기록을 동일한 데이터로 재삽입해 복구한다.
+  Future<void> _undoDelete(Entry entry) async {
+    final db = ref.read(appDatabaseProvider);
+    await db.insertEntry(
+      EntriesCompanion(
+        recordedAt: Value(entry.recordedAt),
+        visited: Value(entry.visited),
+        mood: Value(entry.mood),
+        memo: Value(entry.memo),
+      ),
+    );
+    _invalidateAll();
+  }
+
+  /// 타임라인·통계·캘린더·최초기록일 Provider를 일괄 무효화한다.
+  void _invalidateAll() {
+    ref.invalidate(timelineProvider);
+    ref.invalidate(statsResultProvider);
+    ref.invalidate(earliestEntryDateProvider);
+    final month = ref.read(calendarFocusedMonthProvider);
+    ref.invalidate(monthlyEntriesProvider(month));
+  }
+
   @override
   Widget build(BuildContext context) {
     final items = <_ListItem>[];
@@ -288,6 +334,7 @@ class _TimelineListState extends ConsumerState<_TimelineList> {
         return EntryCard(
           entry: item.entry!,
           onTap: () => widget.onEntryTap(item.entry!),
+          onDelete: () => _deleteEntry(item.entry!),
         );
       },
     );
