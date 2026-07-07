@@ -4,6 +4,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:poopoolog/core/settings/display_settings.dart';
 import 'package:poopoolog/features/calendar/calendar_provider.dart';
 import 'package:poopoolog/features/calendar/widgets/month_picker_sheet.dart';
@@ -541,13 +542,15 @@ class _DayPanel extends StatelessWidget {
           Expanded(
             child: entries.isEmpty
                 ? const _EmptyDayState()
-                : ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(0, 0, 10, 80),
-                    itemCount: entries.length,
-                    itemBuilder: (_, i) => EntryCard(
-                      entry: entries[i],
-                      onTap: () => onEditEntry(entries[i]),
-                      onDelete: () => onDeleteEntry(entries[i]),
+                : SlidableAutoCloseBehavior(
+                    child: ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(0, 0, 10, 80),
+                      itemCount: entries.length,
+                      itemBuilder: (_, i) => EntryCard(
+                        entry: entries[i],
+                        onTap: () => onEditEntry(entries[i]),
+                        onDelete: () => onDeleteEntry(entries[i]),
+                      ),
                     ),
                   ),
           ),

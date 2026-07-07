@@ -84,18 +84,30 @@ class EntryCard extends StatelessWidget {
 
     return Slidable(
       key: ValueKey('entry_${entry.id}'),
+      // 같은 groupTag 내에서 하나만 열리도록 제어 (SlidableAutoCloseBehavior와 함께 동작)
+      groupTag: 'entry_list',
       endActionPane: ActionPane(
         motion: const DrawerMotion(),
         extentRatio: 0.22,
         children: [
-          SlidableAction(
+          CustomSlidableAction(
             onPressed: (_) => onDelete!(),
-            backgroundColor: cs.error,
-            foregroundColor: cs.onError,
-            label: '삭제',
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(8),
-              bottomLeft: Radius.circular(8),
+            backgroundColor: Colors.transparent,
+            child: Container(
+              margin: const EdgeInsets.fromLTRB(4, 6, 8, 6),
+              decoration: BoxDecoration(
+                color: cs.error,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                '삭제',
+                style: TextStyle(
+                  color: cs.onError,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
+              ),
             ),
           ),
         ],

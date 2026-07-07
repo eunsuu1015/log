@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:poopoolog/core/ads/native_ad_widget.dart';
 import 'package:poopoolog/features/timeline/timeline_provider.dart';
@@ -275,7 +276,8 @@ class _TimelineListState extends ConsumerState<_TimelineList> {
     final hasMore = widget.state.hasMore;
     final isLoadingMore = widget.state.isLoadingMore;
 
-    return ListView.separated(
+    return SlidableAutoCloseBehavior(
+      child: ListView.separated(
       controller: _scrollCtrl,
       padding: const EdgeInsets.only(bottom: 100),
       itemCount: items.length + 1, // +1 푸터
@@ -337,6 +339,7 @@ class _TimelineListState extends ConsumerState<_TimelineList> {
           onDelete: () => _deleteEntry(item.entry!),
         );
       },
+    ),
     );
   }
 }
