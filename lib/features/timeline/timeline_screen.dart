@@ -43,7 +43,8 @@ class TimelineScreen extends ConsumerWidget {
             ),
         ],
       ),
-      body: Column(
+      body: SlidableAutoCloseBehavior(
+        child: Column(
         children: [
           const FilterChipRow(),
           Expanded(
@@ -82,6 +83,7 @@ class TimelineScreen extends ConsumerWidget {
             ),
           ),
         ],
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         heroTag: 'fab_timeline',
@@ -276,8 +278,7 @@ class _TimelineListState extends ConsumerState<_TimelineList> {
     final hasMore = widget.state.hasMore;
     final isLoadingMore = widget.state.isLoadingMore;
 
-    return SlidableAutoCloseBehavior(
-      child: ListView.separated(
+    return ListView.separated(
       controller: _scrollCtrl,
       padding: const EdgeInsets.only(bottom: 100),
       itemCount: items.length + 1, // +1 푸터
@@ -339,7 +340,6 @@ class _TimelineListState extends ConsumerState<_TimelineList> {
           onDelete: () => _deleteEntry(item.entry!),
         );
       },
-    ),
     );
   }
 }
