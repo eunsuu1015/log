@@ -11,17 +11,27 @@ import '../../core/database/app_database.dart';
 
 /// 기록 단일 행. 캘린더·타임라인 공용 위젯.
 /// [onDelete]가 제공되면 왼쪽 스와이프 시 오른쪽에 삭제 버튼이 나타난다.
-class EntryCard extends StatelessWidget {
+/// [onSlideChanged]가 제공되면 슬라이드 열림/닫힘 시 컨트롤러를 전달한다(null = 닫힘).
+class EntryCard extends StatefulWidget {
   final Entry entry;
   final VoidCallback onTap;
   final VoidCallback? onDelete;
+  final ValueChanged<SlidableController?>? onSlideChanged;
 
   const EntryCard({
     super.key,
     required this.entry,
     required this.onTap,
     this.onDelete,
+    this.onSlideChanged,
   });
+
+  @override
+  State<EntryCard> createState() => _EntryCardState();
+}
+
+class _EntryCardState extends State<EntryCard> {
+  SlidableController? _controller;
 
   /// 메모를 최대 2줄로 잘라 반환한다.
   /// 카드 높이를 일정하게 유지하기 위해 2줄 초과 시 "..." 접미어를 붙인다.
@@ -31,37 +41,53 @@ class EntryCard extends StatelessWidget {
     return memo;
   }
 
+  /// 슬라이드 애니메이션 상태 변화를 감지해 [onSlideChanged]를 호출한다.
+  void _onAnimStatus(AnimationStatus status) {
+    if (!mounted) return;
+    if (status == AnimationStatus.dismissed) {
+      widget.onSlideChanged?.call(null);
+    } else {
+      widget.onSlideChanged?.call(_controller);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller?.animation.removeStatusListener(_onAnimStatus);
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final isNotVisited = entry.visited == false;
+    final isNotVisited = widget.entry.visited == false;
     final dimColor = cs.onSurfaceVariant.withValues(alpha: 0.7);
 
     final cardContent = InkWell(
-      onTap: onTap,
+      onTap: widget.onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            MoodIndicator.fromEntry(entry: entry, size: 20),
+            MoodIndicator.fromEntry(entry: widget.entry, size: 20),
             const SizedBox(width: 8),
             Container(
               constraints: const BoxConstraints(minWidth: 40),
               child: Text(
-                entry.moodLabel,
+                widget.entry.moodLabel,
                 style: context.tt.titleSmall?.copyWith(
                   color: isNotVisited
                       ? cs.onSurfaceVariant.withValues(alpha: 0.7)
-                      : entry.moodColor,
+                      : widget.entry.moodColor,
                 ),
               ),
             ),
             const SizedBox(width: 8),
             Expanded(
-              child: entry.memo?.isNotEmpty == true
+              child: widget.entry.memo?.isNotEmpty == true
                   ? Text(
-                      _truncateMemo(entry.memo!),
+                      _truncateMemo(widget.entry.memo!),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: context.tt.bodySmall?.copyWith(color: dimColor),
@@ -70,7 +96,7 @@ class EntryCard extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             Text(
-              entry.timeStr,
+              widget.entry.timeStr,
               style: context.tt.titleSmall?.copyWith(
                 color: isNotVisited ? dimColor : cs.onSurfaceVariant,
               ),
@@ -80,10 +106,10 @@ class EntryCard extends StatelessWidget {
       ),
     );
 
-    if (onDelete == null) return cardContent;
+    if (widget.onDelete == null) return cardContent;
 
     return Slidable(
-      key: ValueKey('entry_${entry.id}'),
+      key: ValueKey('entry_${widget.entry.id}'),
       // 같은 groupTag 내에서 하나만 열리도록 제어 (SlidableAutoCloseBehavior와 함께 동작)
       groupTag: 'entry_list',
       endActionPane: ActionPane(
@@ -91,7 +117,7 @@ class EntryCard extends StatelessWidget {
         extentRatio: 0.22,
         children: [
           CustomSlidableAction(
-            onPressed: (_) => onDelete!(),
+            onPressed: (_) => widget.onDelete!(),
             backgroundColor: Colors.transparent,
             child: Container(
               margin: const EdgeInsets.fromLTRB(4, 6, 8, 6),
@@ -112,7 +138,18 @@ class EntryCard extends StatelessWidget {
           ),
         ],
       ),
-      child: cardContent,
+      // Builder로 Slidable 스코프 내에서 컨트롤러를 얻어 애니메이션 리스너를 한 번만 등록한다.
+      child: Builder(
+        builder: (innerContext) {
+          final ctrl = Slidable.of(innerContext);
+          if (ctrl != null && ctrl != _controller) {
+            _controller?.animation.removeStatusListener(_onAnimStatus);
+            _controller = ctrl;
+            ctrl.animation.addStatusListener(_onAnimStatus);
+          }
+          return cardContent;
+        },
+      ),
     );
   }
 }

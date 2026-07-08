@@ -195,6 +195,8 @@ class _TimelineList extends ConsumerStatefulWidget {
 
 class _TimelineListState extends ConsumerState<_TimelineList> {
   final _scrollCtrl = ScrollController();
+  // 현재 열려있는 슬라이드 컨트롤러. 빈 공간 탭 시 닫기에 사용한다.
+  SlidableController? _openController;
 
   @override
   void initState() {
@@ -278,68 +280,74 @@ class _TimelineListState extends ConsumerState<_TimelineList> {
     final hasMore = widget.state.hasMore;
     final isLoadingMore = widget.state.isLoadingMore;
 
-    return ListView.separated(
-      controller: _scrollCtrl,
-      padding: const EdgeInsets.only(bottom: 100),
-      itemCount: items.length + 1, // +1 푸터
-      separatorBuilder: (_, i) {
-        if (i >= items.length - 1) return const SizedBox.shrink();
-        if (items[i + 1].isHeader) {
-          return Divider(
-            height: 1,
-            indent: 14,
-            endIndent: 14,
-            color: dividerColor,
-          );
-        }
-        return const SizedBox.shrink();
-      },
-      itemBuilder: (_, i) {
-        // 푸터
-        if (i == items.length) {
-          if (isLoadingMore) {
-            return const Padding(
-              padding: EdgeInsets.symmetric(vertical: 20),
-              child: Center(child: CircularProgressIndicator()),
+    // translucent: 카드 영역 외의 빈 공간(푸터 아래 등) 탭 시에도 열린 슬라이드를 닫는다.
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTap: () => _openController?.close(),
+      child: ListView.separated(
+        controller: _scrollCtrl,
+        padding: const EdgeInsets.only(bottom: 100),
+        itemCount: items.length + 1, // +1 푸터
+        separatorBuilder: (_, i) {
+          if (i >= items.length - 1) return const SizedBox.shrink();
+          if (items[i + 1].isHeader) {
+            return Divider(
+              height: 1,
+              indent: 14,
+              endIndent: 14,
+              color: dividerColor,
             );
           }
-          if (hasMore) {
-            return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              child: Center(
-                child: TextButton(
-                  onPressed: () {
-                    ref.read(timelineProvider.notifier).loadMore();
-                  },
-                  child: const Text('이전 기록 더 보기'),
+          return const SizedBox.shrink();
+        },
+        itemBuilder: (_, i) {
+          // 푸터
+          if (i == items.length) {
+            if (isLoadingMore) {
+              return const Padding(
+                padding: EdgeInsets.symmetric(vertical: 20),
+                child: Center(child: CircularProgressIndicator()),
+              );
+            }
+            if (hasMore) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Center(
+                  child: TextButton(
+                    onPressed: () {
+                      ref.read(timelineProvider.notifier).loadMore();
+                    },
+                    child: const Text('이전 기록 더 보기'),
+                  ),
                 ),
+              );
+            }
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              child: Center(
+                child: Text('모든 기록을 불러왔어요', style: context.tt.bodySmall),
               ),
             );
           }
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 20),
-            child: Center(
-              child: Text('모든 기록을 불러왔어요', style: context.tt.bodySmall),
-            ),
-          );
-        }
 
-        final item = items[i];
-        if (item.isHeader) {
-          return DateHeader(date: item.date!, count: item.count!);
-        }
-        if (item.isNativeAd) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            child: NativeAdWidget(),
+          final item = items[i];
+          if (item.isHeader) {
+            return DateHeader(date: item.date!, count: item.count!);
+          }
+          if (item.isNativeAd) {
+            return const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              child: NativeAdWidget(),
+            );
+          }
+          return EntryCard(
+            entry: item.entry!,
+            onTap: () => widget.onEntryTap(item.entry!),
+            onDelete: () => _deleteEntry(item.entry!),
+            onSlideChanged: (ctrl) => _openController = ctrl,
           );
-        }
-        return EntryCard(
-          entry: item.entry!,
-          onTap: () => widget.onEntryTap(item.entry!),
-          onDelete: () => _deleteEntry(item.entry!),
-        );
-      },
+        },
+      ),
     );
   }
 }

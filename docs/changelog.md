@@ -2,6 +2,18 @@
 
 ---
 
+### [2026-07-08] 타임라인 빈 공간 탭 시 슬라이드 닫기 수정
+- **변경 사항:**
+  - `EntryCard`를 `StatefulWidget`으로 전환, `onSlideChanged` 콜백 추가
+  - `Builder`를 `Slidable.child` 안에 삽입해 컨트롤러의 애니메이션 리스너를 한 번만 등록
+  - `_TimelineListState`에서 열린 컨트롤러를 `_openController`로 추적
+  - `GestureDetector(behavior: HitTestBehavior.translucent)`로 `ListView`를 감싸 빈 공간(푸터 아래 등) 탭 시 `_openController?.close()` 호출
+- **영향받는 파일:**
+  - 수정 - `lib/shared/widgets/entry_card.dart` — `StatelessWidget` → `StatefulWidget`, `onSlideChanged` 추가
+  - 수정 - `lib/features/timeline/timeline_screen.dart` — `_openController` 추적, `GestureDetector` 래핑
+- **특이사항 및 남은 작업:**
+  - 캘린더 화면은 DayPanel 높이가 짧아 동일 문제 미발생; 필요 시 동일 패턴 적용 가능
+
 ### [2026-07-08] 캘린더·타임라인 스와이프 삭제 기능 추가
 - **변경 사항:**
   - `EntryCard` 왼쪽 스와이프 시 오른쪽에 빨간 '삭제' 버튼 노출 (`flutter_slidable` 사용)
