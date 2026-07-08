@@ -2,6 +2,33 @@
 
 ---
 
+### [2026-07-08] 타임라인 빈 공간 탭 시 슬라이드 닫기 수정
+- **변경 사항:**
+  - `EntryCard`를 `StatefulWidget`으로 전환, `onSlideChanged` 콜백 추가
+  - `Builder`를 `Slidable.child` 안에 삽입해 컨트롤러의 애니메이션 리스너를 한 번만 등록
+  - `_TimelineListState`에서 열린 컨트롤러를 `_openController`로 추적
+  - `GestureDetector(behavior: HitTestBehavior.translucent)`로 `ListView`를 감싸 빈 공간(푸터 아래 등) 탭 시 `_openController?.close()` 호출
+- **영향받는 파일:**
+  - 수정 - `lib/shared/widgets/entry_card.dart` — `StatelessWidget` → `StatefulWidget`, `onSlideChanged` 추가
+  - 수정 - `lib/features/timeline/timeline_screen.dart` — `_openController` 추적, `GestureDetector` 래핑
+- **특이사항 및 남은 작업:**
+  - 캘린더 화면은 DayPanel 높이가 짧아 동일 문제 미발생; 필요 시 동일 패턴 적용 가능
+
+### [2026-07-08] 캘린더·타임라인 스와이프 삭제 기능 추가
+- **변경 사항:**
+  - `EntryCard` 왼쪽 스와이프 시 오른쪽에 빨간 '삭제' 버튼 노출 (`flutter_slidable` 사용)
+  - 삭제 버튼 탭 → 확인 팝업 없이 즉시 삭제, 하단 SnackBar로 '삭제되었습니다.' + '복구하기' 버튼 5초 표시
+  - '복구하기' 탭 시 동일 데이터로 재삽입해 실질적 undo 구현
+  - 캘린더 DayPanel·타임라인 리스트 양쪽에 삭제 연동, 삭제/복구 후 Provider 일괄 갱신
+- **영향받는 파일:**
+  - 신규 의존성 - `pubspec.yaml` — flutter_slidable: ^4.0.3 추가
+  - 수정 - `lib/shared/widgets/entry_card.dart` — `Dismissible` → `Slidable` 교체
+  - 수정 - `lib/features/timeline/timeline_screen.dart` — `_deleteEntry()`, `_undoDelete()`, `_invalidateAll()` 추가
+  - 수정 - `lib/features/calendar/calendar_screen.dart` — 동일 메서드 추가, 콜백 체인 연결
+  - 수정 - `test/features/calendar/calendar_screen_test.dart` — 뷰포트 픽스 2건 추가
+- **특이사항 및 남은 작업:**
+  - 삭제 후 홈 위젯 자동 갱신 미포함 (오늘 기록 삭제 시 위젯은 다음 갱신 주기에 반영됨)
+
 ### [2026-06-09] UI 개선 및 버그 수정 다수
 - **변경 사항:**
   - **Android 홈 화면 위젯**

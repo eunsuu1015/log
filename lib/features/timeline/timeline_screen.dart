@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:poopoolog/core/ads/native_ad_widget.dart';
 import 'package:poopoolog/features/timeline/timeline_provider.dart';
@@ -10,7 +11,10 @@ import 'package:poopoolog/features/timeline/widgets/date_header.dart';
 import 'package:poopoolog/features/timeline/widgets/filter_chip_row.dart';
 import 'package:poopoolog/shared/widgets/entry_card.dart';
 
+import 'package:drift/drift.dart' show Value;
+
 import '../../core/database/app_database.dart';
+import '../../core/database/database_provider.dart';
 import '../../core/debug/debug_flags.dart';
 import '../../shared/theme/app_theme.dart';
 import '../calendar/calendar_provider.dart';
@@ -39,7 +43,8 @@ class TimelineScreen extends ConsumerWidget {
             ),
         ],
       ),
-      body: Column(
+      body: SlidableAutoCloseBehavior(
+        child: Column(
         children: [
           const FilterChipRow(),
           Expanded(
@@ -78,6 +83,7 @@ class TimelineScreen extends ConsumerWidget {
             ),
           ),
         ],
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         heroTag: 'fab_timeline',
@@ -189,6 +195,8 @@ class _TimelineList extends ConsumerStatefulWidget {
 
 class _TimelineListState extends ConsumerState<_TimelineList> {
   final _scrollCtrl = ScrollController();
+  // 현재 열려있는 슬라이드 컨트롤러. 빈 공간 탭 시 닫기에 사용한다.
+  SlidableController? _openController;
 
   @override
   void initState() {
@@ -210,6 +218,49 @@ class _TimelineListState extends ConsumerState<_TimelineList> {
     }
   }
 
+  /// DB에서 기록을 삭제하고, 하단 SnackBar로 '복구하기' 옵션을 5초간 제공한다.
+  Future<void> _deleteEntry(Entry entry) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final db = ref.read(appDatabaseProvider);
+    await db.deleteEntry(entry.id);
+    _invalidateAll();
+
+    messenger.clearSnackBars();
+    messenger.showSnackBar(
+      SnackBar(
+        content: const Text('삭제되었습니다.'),
+        duration: const Duration(seconds: 5),
+        action: SnackBarAction(
+          label: '복구하기',
+          onPressed: () => _undoDelete(entry),
+        ),
+      ),
+    );
+  }
+
+  /// 삭제된 기록을 동일한 데이터로 재삽입해 복구한다.
+  Future<void> _undoDelete(Entry entry) async {
+    final db = ref.read(appDatabaseProvider);
+    await db.insertEntry(
+      EntriesCompanion(
+        recordedAt: Value(entry.recordedAt),
+        visited: Value(entry.visited),
+        mood: Value(entry.mood),
+        memo: Value(entry.memo),
+      ),
+    );
+    _invalidateAll();
+  }
+
+  /// 타임라인·통계·캘린더·최초기록일 Provider를 일괄 무효화한다.
+  void _invalidateAll() {
+    ref.invalidate(timelineProvider);
+    ref.invalidate(statsResultProvider);
+    ref.invalidate(earliestEntryDateProvider);
+    final month = ref.read(calendarFocusedMonthProvider);
+    ref.invalidate(monthlyEntriesProvider(month));
+  }
+
   @override
   Widget build(BuildContext context) {
     final items = <_ListItem>[];
@@ -229,67 +280,74 @@ class _TimelineListState extends ConsumerState<_TimelineList> {
     final hasMore = widget.state.hasMore;
     final isLoadingMore = widget.state.isLoadingMore;
 
-    return ListView.separated(
-      controller: _scrollCtrl,
-      padding: const EdgeInsets.only(bottom: 100),
-      itemCount: items.length + 1, // +1 푸터
-      separatorBuilder: (_, i) {
-        if (i >= items.length - 1) return const SizedBox.shrink();
-        if (items[i + 1].isHeader) {
-          return Divider(
-            height: 1,
-            indent: 14,
-            endIndent: 14,
-            color: dividerColor,
-          );
-        }
-        return const SizedBox.shrink();
-      },
-      itemBuilder: (_, i) {
-        // 푸터
-        if (i == items.length) {
-          if (isLoadingMore) {
-            return const Padding(
-              padding: EdgeInsets.symmetric(vertical: 20),
-              child: Center(child: CircularProgressIndicator()),
+    // translucent: 카드 영역 외의 빈 공간(푸터 아래 등) 탭 시에도 열린 슬라이드를 닫는다.
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTap: () => _openController?.close(),
+      child: ListView.separated(
+        controller: _scrollCtrl,
+        padding: const EdgeInsets.only(bottom: 100),
+        itemCount: items.length + 1, // +1 푸터
+        separatorBuilder: (_, i) {
+          if (i >= items.length - 1) return const SizedBox.shrink();
+          if (items[i + 1].isHeader) {
+            return Divider(
+              height: 1,
+              indent: 14,
+              endIndent: 14,
+              color: dividerColor,
             );
           }
-          if (hasMore) {
-            return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              child: Center(
-                child: TextButton(
-                  onPressed: () {
-                    ref.read(timelineProvider.notifier).loadMore();
-                  },
-                  child: const Text('이전 기록 더 보기'),
+          return const SizedBox.shrink();
+        },
+        itemBuilder: (_, i) {
+          // 푸터
+          if (i == items.length) {
+            if (isLoadingMore) {
+              return const Padding(
+                padding: EdgeInsets.symmetric(vertical: 20),
+                child: Center(child: CircularProgressIndicator()),
+              );
+            }
+            if (hasMore) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Center(
+                  child: TextButton(
+                    onPressed: () {
+                      ref.read(timelineProvider.notifier).loadMore();
+                    },
+                    child: const Text('이전 기록 더 보기'),
+                  ),
                 ),
+              );
+            }
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              child: Center(
+                child: Text('모든 기록을 불러왔어요', style: context.tt.bodySmall),
               ),
             );
           }
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 20),
-            child: Center(
-              child: Text('모든 기록을 불러왔어요', style: context.tt.bodySmall),
-            ),
-          );
-        }
 
-        final item = items[i];
-        if (item.isHeader) {
-          return DateHeader(date: item.date!, count: item.count!);
-        }
-        if (item.isNativeAd) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            child: NativeAdWidget(),
+          final item = items[i];
+          if (item.isHeader) {
+            return DateHeader(date: item.date!, count: item.count!);
+          }
+          if (item.isNativeAd) {
+            return const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              child: NativeAdWidget(),
+            );
+          }
+          return EntryCard(
+            entry: item.entry!,
+            onTap: () => widget.onEntryTap(item.entry!),
+            onDelete: () => _deleteEntry(item.entry!),
+            onSlideChanged: (ctrl) => _openController = ctrl,
           );
-        }
-        return EntryCard(
-          entry: item.entry!,
-          onTap: () => widget.onEntryTap(item.entry!),
-        );
-      },
+        },
+      ),
     );
   }
 }

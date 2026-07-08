@@ -71,6 +71,11 @@ void main() {
     });
 
     testWidgets('다른 달 보기: AppBar에 오늘 버튼 노출', (tester) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
       final db = _makeDb();
       // firstDay(2026-05-01) 이후 & 오늘 달과 다른 달: 다음 달 사용
       final now = DateTime.now();
@@ -309,6 +314,11 @@ void main() {
 
   group('오늘 버튼 동작', () {
     testWidgets('오늘 버튼 탭 → calendarFocusedMonth 현재 달로 변경', (tester) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
       final db = _makeDb();
       final now = DateTime.now();
       // firstDay(2026-05-01) 이후이면서 오늘 달과 다른 달: 다음 달
