@@ -2,6 +2,35 @@
 
 ---
 
+### [2026-07-27] Google Play Billing Library 8.0.0 적용 (Flutter SDK 업그레이드)
+- **변경 사항:**
+  - Google Play Console의 "Billing Library 8.0.0 이상 사용" 경고 대응
+  - Flutter SDK를 3.32.8 → 3.44.8(stable)로 업그레이드 — `in_app_purchase_android` 0.5.x가 Flutter 3.38 이상을 요구해 선행 필요했음
+  - `in_app_purchase_android`이 0.4.0+5 → 0.5.2로 자동 상향되며 Google Play Billing Library 7.1.1 → 8.0.0 적용
+  - Android Gradle Plugin 8.7.3 → 8.9.1 상향 (billing 8.0.0의 전이 의존성 androidx.browser/core가 요구)
+  - Flutter 3.44 업그레이드로 새로 발생한 `Switch.activeColor` deprecated 경고 수정 (`activeThumbColor`로 교체)
+  - Flutter 3.44에서 강화된 "ListTile을 배경색 있는 DecoratedBox로 감싸면 잉크 효과가 보이지 않는다" 어서션이 테스트 하드 실패로 이어져, 관련 위젯 3곳에 `Material(color: Colors.transparent)` 래퍼 추가
+- **영향받는 파일:**
+  - 수정 - `android/settings.gradle.kts` — AGP 8.7.3 → 8.9.1
+  - 수정 - `lib/features/record/record_screen.dart` — `_VisitedToggle`에 `Material` 래퍼 추가, `activeColor` → `activeThumbColor`
+  - 수정 - `lib/features/onboarding/onboarding_screen.dart` — `_RecordPreview`에 `Material` 래퍼 추가, `activeColor` → `activeThumbColor`
+  - 수정 - `lib/features/more/more_screen.dart` — `_SectionCard`에 `Material` 래퍼 추가
+- **특이사항 및 남은 작업:**
+  - `flutter analyze` 0 이슈, `flutter test` 279개 전체 통과, `flutter build apk --debug` 빌드 성공 확인
+  - Flutter SDK는 이 개발 환경(로컬 머신) 전역에 설치된 버전이 업그레이드된 것이라, 다른 프로젝트에도 영향 있을 수 있음
+  - 실제 결제 플로우(구매/복원)는 Play Console 테스트 트랙에서 별도 검증 필요
+
+### [2026-07-27] 캘린더 '오늘로 돌아가기' 버튼 추가 및 targetSdk 36 상향
+- **변경 사항:**
+  - 캘린더에서 최초 기록일 이전 달로 이동하면 나오는 안내 화면("푸푸로그를 시작하기 전이에요!")에 오늘로 즉시 이동하는 버튼 추가
+  - Android `targetSdk`·`compileSdk`를 Flutter 기본값(35)에서 36(Android 16)으로 상향
+- **영향받는 파일:**
+  - 수정 - `lib/features/calendar/calendar_screen.dart` — `_BeforeEarliestState`에 `onGoToToday` 콜백 및 `FilledButton.icon` 추가
+  - 수정 - `android/app/build.gradle.kts` — `compileSdk = 36`, `targetSdk = 36` 명시
+- **특이사항 및 남은 작업:**
+  - targetSdk 36 상향 후 API 36 에뮬레이터에서 전 화면(캘린더·타임라인·통계·더보기·기록 입력) 및 기록 저장 플로우 스모크 테스트 완료 — 엣지투엣지·예측 뒤로가기 관련 문제 없음
+  - 정식 배포 전 여러 날짜에 걸친 데이터 축적 상태에서 광고 노출 주기·인앱결제 플로우 재확인 권장
+
 ### [2026-07-08] 타임라인 빈 공간 탭 시 슬라이드 닫기 수정
 - **변경 사항:**
   - `EntryCard`를 `StatefulWidget`으로 전환, `onSlideChanged` 콜백 추가

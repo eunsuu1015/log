@@ -1,7 +1,7 @@
 # PooPooLog — Tasks
 
 > AI 협업 작업 현황 관리 파일. 작업 시작 전 반드시 확인할 것.
-> 마지막 갱신: 2026-05-28 (단위 테스트 완료 반영, flutter analyze 0 이슈 달성)
+> 마지막 갱신: 2026-07-27 (Flutter 3.44.8 업그레이드, Google Play Billing Library 8.0.0 적용)
 
 ---
 
@@ -42,6 +42,7 @@
   - 더보기 화면 최상단 `_RemoveAdsBanner` 위젯 — 구매/복원 UI
   - [ ] Google Play Console에 `remove_ads` 상품 등록 (출시 전)
   - [ ] App Store Connect에 `remove_ads` 상품 등록 (출시 전)
+  - [x] Google Play Billing Library 8.0.0 이상 적용 (Play 경고 대응) — Flutter 3.44.8 업그레이드 + `in_app_purchase_android` 0.5.2
 - [x] 광고 단위 ID 교체 (배너·전면·네이티브 Android·iOS 6개) — `secrets.json` 완료
 - [ ] AdMob App ID 교체 (광고 단위 ID와 별개, 출시 필수)
   - Android: `android/local.properties` — `admob.app.id=ca-app-pub-XXXXX~YYYYY`
@@ -79,6 +80,7 @@
 - [x] `calendar_provider.dart` 리팩토링
 - [x] `mood_dot_row.dart` 리팩토링
 - [x] `month_picker_sheet.dart` 리팩토링
+- [x] 최초 기록일 이전 달 안내 화면에 '오늘로 돌아가기' 버튼 추가
 
 ### 타임라인 (TimelineScreen)
 - [x] 날짜별 그룹 리스트 표시 (`DayGroup`)

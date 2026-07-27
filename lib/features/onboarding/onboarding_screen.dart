@@ -262,22 +262,27 @@ class _RecordPreview extends StatelessWidget {
             color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
             borderRadius: BorderRadius.circular(10),
           ),
-          child: ListTile(
-            title: Text('화장실에 다녀왔어요', style: tt.titleSmall),
-            trailing: Transform.scale(
-              scale: 0.8,
-              child: IgnorePointer(
-                child: Switch(
-                  value: true,
-                  onChanged: (_) {},
-                  activeColor: cs.primary,
+          child: Material(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+            clipBehavior: Clip.antiAlias,
+            child: ListTile(
+              title: Text('화장실에 다녀왔어요', style: tt.titleSmall),
+              trailing: Transform.scale(
+                scale: 0.8,
+                child: IgnorePointer(
+                  child: Switch(
+                    value: true,
+                    onChanged: (_) {},
+                    activeThumbColor: cs.primary,
+                  ),
                 ),
               ),
-            ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-            minVerticalPadding: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+              minVerticalPadding: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
           ),
         ),

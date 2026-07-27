@@ -28,7 +28,7 @@ admob.app.id=ca-app-pub-XXXXXXXXXXXXXXXX~XXXXXXXXXX
 
 ### Android (Play Store)
 ```bash
-flutter build appbundle --dart-define-from-file=secrets.json
+flutter build appbundle --release --dart-define-from-file=secrets.json
 ```
 결과물: `build/app/outputs/bundle/release/app-release.aab`
 

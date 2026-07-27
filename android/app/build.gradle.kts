@@ -33,7 +33,8 @@ val secrets: Map<String, String> = if (secretsFile.exists()) {
 
 android {
     namespace = "com.tistory.es1015.poopoolog"
-    compileSdk = flutter.compileSdkVersion
+    // targetSdk 36(Android 16) 적용을 위해 Flutter 기본값(35) 대신 명시적으로 지정
+    compileSdk = 36
     ndkVersion = "27.0.12077973"
 
     compileOptions {
@@ -62,7 +63,7 @@ android {
     defaultConfig {
         applicationId = "com.tistory.es1015.poopoolog"
         minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+        targetSdk = 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         // secrets.json에 ADMOB_APP_ID_ANDROID가 없으면 Google 테스트 App ID로 폴백
