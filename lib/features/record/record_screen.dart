@@ -321,20 +321,27 @@ class _VisitedToggle extends StatelessWidget {
         color: context.cs.surfaceContainerHighest.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(10),
       ),
-      child: ListTile(
-        title: Text('화장실에 다녀왔어요', style: context.tt.titleSmall),
-        trailing: Transform.scale(
-          scale: 0.8,
-          child: Switch(
-            value: value ?? false,
-            onChanged: onChanged,
-            activeColor: context.cs.primary,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(10),
+        clipBehavior: Clip.antiAlias,
+        child: ListTile(
+          title: Text('화장실에 다녀왔어요', style: context.tt.titleSmall),
+          trailing: Transform.scale(
+            scale: 0.8,
+            child: Switch(
+              value: value ?? false,
+              onChanged: onChanged,
+              activeThumbColor: context.cs.primary,
+            ),
+          ),
+          onTap: () => onChanged(!(value ?? false)),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+          minVerticalPadding: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
           ),
         ),
-        onTap: () => onChanged(!(value ?? false)),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-        minVerticalPadding: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
   }

@@ -100,7 +100,10 @@ class CalendarScreen extends ConsumerWidget {
         ],
       ),
       body: isBeforeEarliest
-          ? _BeforeEarliestState(earliestDate: earliestDate)
+          ? _BeforeEarliestState(
+              earliestDate: earliestDate,
+              onGoToToday: goToToday,
+            )
           : entriesAsync.hasError
           ? Center(child: Text('오류: ${entriesAsync.error}'))
           : _CalendarBody(
@@ -424,7 +427,11 @@ class _CalendarBody extends StatelessWidget {
 /// 최초 기록일 이전 달을 보고 있을 때 표시하는 안내 위젯
 class _BeforeEarliestState extends StatelessWidget {
   final DateTime earliestDate;
-  const _BeforeEarliestState({required this.earliestDate});
+  final VoidCallback onGoToToday;
+  const _BeforeEarliestState({
+    required this.earliestDate,
+    required this.onGoToToday,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -450,6 +457,12 @@ class _BeforeEarliestState extends StatelessWidget {
               fontWeight: FontWeight.w400,
               color: cs.onSurfaceVariant,
             ),
+          ),
+          const SizedBox(height: 20),
+          FilledButton.icon(
+            onPressed: onGoToToday,
+            icon: const Icon(Icons.today_outlined, size: 18),
+            label: const Text('오늘로 돌아가기'),
           ),
         ],
       ),
