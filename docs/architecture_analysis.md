@@ -25,12 +25,12 @@ main()
   ├─ Firebase.initializeApp()            # Firebase 초기화 (Remote Config 사전 준비)
   ├─ MobileAds.instance.initialize()     # AdMob 초기화
   ├─ AdService().preload()               # 전면 광고 미리 로드
-  ├─ SharedPreferences → 테마·기분표시방식·시작요일·광고제거여부 로드
+  ├─ SharedPreferences → 테마·테마강조색상·기분표시방식·시작요일·광고제거여부 로드
   ├─ runApp(_SplashApp)                  # 초기화 완료까지 스플래시 최소 1초 표시
   └─ runApp(
        ProviderScope(
          overrides: [
-           themeModeProvider, moodDisplayProvider,
+           themeModeProvider, themeAccentProvider, moodDisplayProvider,
            startWeekdaySundayProvider, adsRemovedProvider
          ]
          child: PooPooLogApp → (온보딩 또는 AppShell)
@@ -124,7 +124,8 @@ appDatabaseProvider (Provider<AppDatabase>)
                  └─ null → 신규 / Entry → 수정
 
 currentTabProvider           StateProvider<int>          탭 인덱스
-themeModeProvider            StateProvider<ThemeMode>    테마 (초기값 ProviderScope override)
+themeModeProvider            StateProvider<ThemeMode>    테마 모드 (초기값 ProviderScope override)
+themeAccentProvider          StateProvider<ThemeAccent>  테마 강조 색상 (초기값 ProviderScope override)
 moodDisplayProvider          StateProvider<MoodDisplay>  기분 표시 방식 (dot/face)
 startWeekdaySundayProvider   StateProvider<bool>         캘린더 시작 요일 (true=일요일)
 adsRemovedProvider           StateProvider<bool>         광고 제거 구매 여부

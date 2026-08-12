@@ -2,6 +2,51 @@
 
 ---
 
+### [2026-07-27] 테마 강조 색상 '흰색' → '회색'으로 이름·색상 정정
+- **변경 사항:**
+  - 라이트 모드에서 "흰색" 옵션이 실제로는 대비 확보를 위해 회색(`#707070`)으로 보여 이름과 실제 색상이 불일치하는 문제 발견
+  - `ThemeAccent.white` → `ThemeAccent.gray`로 이름 변경, 라벨 "흰색" → "회색"
+  - 설정 화면 스와치도 더 이상 순백으로 강제 표시하지 않고 실제 사용되는 회색(`lightPrimary`)을 그대로 보여주도록 변경 — 이름과 눈에 보이는 색이 일치
+  - enum 순서(인덱스)는 유지해 기존 저장된 사용자의 선택은 그대로 보존됨
+- **영향받는 파일:**
+  - 수정 - `lib/core/models/theme_accent_provider.dart` — enum 값 `white` → `gray`, 라벨 변경, `swatchColor`에서 gray 특수 처리 제거
+  - 수정 - `lib/features/more/more_screen.dart` — 스와치 체크마크 색상 분기(흰색 전용 처리) 제거, 항상 흰색 체크마크 사용
+  - 수정 - `test/core/models/theme_accent_provider_test.dart` — `gray` 이름·라벨·스와치 동작에 맞춰 테스트 갱신
+- **특이사항 및 남은 작업:**
+  - `flutter analyze` 0 이슈, `flutter test` 290개 전체 통과
+  - API 36 에뮬레이터에서 다크모드 + 회색 조합 확인 — 스와치·체크마크 모두 정상 표시
+
+### [2026-07-27] 통계 시간대별 히트맵 색상을 테마 강조 색상으로 변경
+- **변경 사항:**
+  - 통계 화면 "시간대별 방문" 히트맵 그리드·범례·"최다" 뱃지·상세 바텀시트 바 차트의 색상을 하드코딩된 초록 계열 대신 현재 테마 강조 색상(`ColorScheme.primary`) 기준 4단계로 생성하도록 변경
+  - 더보기 > 테마에서 색상을 바꾸면 캘린더·버튼뿐 아니라 히트맵도 함께 즉시 반영됨
+- **영향받는 파일:**
+  - 수정 - `lib/features/stats/widgets/stat_heat_map_grid.dart` — 하드코딩된 `_kHeat1~4`/`_kLegendColors` 상수 제거, `heatShades(ColorScheme)` 정적 메서드로 대체. 그리드·범례·"최다" 뱃지·상세 시트 바 색상 모두 연동
+  - 수정 - `test/features/stats/stats_screen_test.dart` — `heatColor` 단위 테스트를 하드코딩된 hex 기대값 대신 `heatShades(cs)` 기반으로 갱신, 색상 전환 검증 테스트 1건 추가
+- **특이사항 및 남은 작업:**
+  - `flutter analyze` 0 이슈, `flutter test` 289개 전체 통과
+  - API 36 에뮬레이터에서 테스트 데이터로 실측 — 하늘(기본 저장값) → 빨강 전환 시 히트맵·범례·피크 시간 뱃지가 즉시 붉은 계열로 바뀌는 것 확인
+  - 기분 분포 도넛 차트(좋음/보통/나쁨)는 별도 의미 색상 체계라 이번 변경 대상에서 제외
+
+### [2026-07-27] 더보기 > 테마 강조 색상 설정 추가
+- **변경 사항:**
+  - 더보기 > 설정에 "테마" 항목 추가 — 앱 메인 색상(초록)을 10가지 색상 중에서 선택 가능
+  - 색상: 빨강 · 주황 · 노랑 · 초록(기본값, 기존 디자인과 동일) · 하늘 · 파랑 · 남색 · 보라 · 흰색 · 검정
+  - 모든 색상은 기존 초록 테마와 유사한 톤(채도·명도)으로 맞춤 — 라이트 모드는 깊고 차분한 톤, 다크 모드는 밝은 파스텔 톤
+  - 흰색·검정은 라이트/다크 배경 모두에서 대비가 확보되도록 별도 톤 조정 (설정 화면 스와치는 조정 없이 순백·순흑 그대로 표시)
+  - 라이트모드/다크모드/기기설정 3가지 다크모드 옵션은 기존과 동일하게 유지, 테마 강조 색상과 독립적으로 동작
+  - 선택한 색상은 `shared_preferences`에 저장되어 앱 재시작 후에도 유지
+- **영향받는 파일:**
+  - 신규 생성 - `lib/core/models/theme_accent_provider.dart` — `ThemeAccent` enum(10종), `themeAccentProvider`, `loadThemeAccent()` / `saveThemeAccent()`
+  - 수정 - `lib/shared/theme/app_theme.dart` — `AppTheme.light()/dark()`에 `accent` 매개변수 추가, `_accentColorScheme()` 헬퍼로 primary 계열 색상만 교체
+  - 수정 - `lib/main.dart` — 앱 시작 시 저장된 테마 강조 색상 로드 후 `themeAccentProvider` override
+  - 수정 - `lib/features/more/more_screen.dart` — "테마" 설정 항목 및 `_ThemeAccentPickerSheet`(원형 스와치 그리드 바텀시트) 추가
+  - 신규 생성 - `test/core/models/theme_accent_provider_test.dart` — 라벨·색상·저장/로드 단위 테스트 7건
+- **특이사항 및 남은 작업:**
+  - `flutter analyze` 0 이슈, `flutter test` 288개 전체 통과, API 36 에뮬레이터에서 라이트/다크 모드 × 여러 색상 조합 실측 확인 완료
+  - 기분 색상(좋음/보통/나쁨 도트 등)은 테마 강조 색상과 무관한 별도 의미 체계로, 이번 변경의 영향을 받지 않음
+  - secondary·tertiary·surface 등 나머지 팔레트는 색상별로 새로 만들지 않고 기존 초록 계열 뉴트럴을 그대로 재사용 (primary 계열만 교체)
+
 ### [2026-07-27] Google Play Billing Library 8.0.0 적용 (Flutter SDK 업그레이드)
 - **변경 사항:**
   - Google Play Console의 "Billing Library 8.0.0 이상 사용" 경고 대응

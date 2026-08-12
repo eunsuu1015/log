@@ -18,6 +18,7 @@ import '../../core/remote_config/remote_config_service.dart';
 import '../../shared/theme/app_theme.dart';
 import '../../core/iap/iap_provider.dart';
 import '../../core/models/mood_display_provider.dart';
+import '../../core/models/theme_accent_provider.dart';
 import '../../core/settings/display_settings.dart';
 import '../calendar/calendar_provider.dart';
 import '../onboarding/onboarding_screen.dart';
@@ -116,6 +117,7 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
   @override
   Widget build(BuildContext context) {
     final themeMode = ref.watch(themeModeProvider);
+    final themeAccent = ref.watch(themeAccentProvider);
     final moodDisplay = ref.watch(moodDisplayProvider);
     final startSunday = ref.watch(startWeekdaySundayProvider);
     final adsRemoved = ref.watch(adsRemovedProvider);
@@ -164,6 +166,34 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
                   ),
                 ),
                 onTap: () => _showThemePicker(themeMode),
+              ),
+              const Divider(height: 1, indent: 52),
+              _SettingsTile(
+                icon: Icons.palette_outlined,
+                title: '테마',
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 16,
+                      height: 16,
+                      decoration: BoxDecoration(
+                        color: themeAccent.swatchColor,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: cs.outlineVariant),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      themeAccent.label,
+                      style: context.tt.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w400,
+                        color: Colors.grey,
+                      ),
+                    ),
+                  ],
+                ),
+                onTap: () => _showThemeAccentPicker(themeAccent),
               ),
               const Divider(height: 1, indent: 52),
               _SettingsTile(
@@ -376,6 +406,18 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
           ref.read(themeModeProvider.notifier).state = mode;
           final prefs = await SharedPreferences.getInstance();
           await prefs.setInt(kThemeModeKey, mode.index);
+        },
+      ),
+    );
+  }
+
+  void _showThemeAccentPicker(ThemeAccent current) {
+    _showBottomSheet(
+      (_) => _ThemeAccentPickerSheet(
+        current: current,
+        onSelected: (accent) async {
+          ref.read(themeAccentProvider.notifier).state = accent;
+          await saveThemeAccent(accent);
         },
       ),
     );
@@ -940,6 +982,87 @@ class _ListPickerSheet extends StatelessWidget {
               },
             ),
           const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+}
+
+/// 강조 색상(테마 메인 컬러) 선택 바텀시트. 색상 원형 스와치를 격자로 표시한다.
+class _ThemeAccentPickerSheet extends StatelessWidget {
+  final ThemeAccent current;
+  final void Function(ThemeAccent) onSelected;
+
+  const _ThemeAccentPickerSheet({
+    required this.current,
+    required this.onSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(height: 8),
+          const _DragHandle(),
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: Text(
+              '테마',
+              style: context.tt.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Wrap(
+              spacing: 20,
+              runSpacing: 18,
+              alignment: WrapAlignment.center,
+              children: ThemeAccent.values.map((accent) {
+                final selected = accent == current;
+                return GestureDetector(
+                  onTap: () {
+                    onSelected(accent);
+                    Navigator.pop(context);
+                  },
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: accent.swatchColor,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: selected ? cs.primary : cs.outlineVariant,
+                            width: selected ? 2.5 : 1,
+                          ),
+                        ),
+                        child: selected
+                            ? const Icon(
+                                Icons.check,
+                                color: Colors.white,
+                                size: 20,
+                              )
+                            : null,
+                      ),
+                      const SizedBox(height: 6),
+                      Text(accent.label, style: context.tt.labelSmall),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+          const SizedBox(height: 16),
         ],
       ),
     );

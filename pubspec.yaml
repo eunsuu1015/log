@@ -1,6 +1,6 @@
 name: poopoolog
 
-version: 1.0.2+11
+version: 1.0.4+13
 
 environment:
   sdk: ^3.8.1

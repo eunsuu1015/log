@@ -1,7 +1,7 @@
 # PooPooLog — Tasks
 
 > AI 협업 작업 현황 관리 파일. 작업 시작 전 반드시 확인할 것.
-> 마지막 갱신: 2026-07-27 (Flutter 3.44.8 업그레이드, Google Play Billing Library 8.0.0 적용)
+> 마지막 갱신: 2026-07-27 (테마 색상 '흰색' → '회색'으로 이름·색상 정정)
 
 ---
 
@@ -99,6 +99,7 @@
 - [x] 요약 카드 (방문한 날 수 + 총 방문 횟수)
 - [x] 기분 분포 도넛 차트 (`fl_chart`)
 - [x] 시간대별 히트맵 그리드 (24칸) — 최대 횟수 대비 비율 기반 색상
+- [x] 히트맵 색상을 테마 강조 색상(`cs.primary`) 기준으로 변경 (기존 하드코딩된 초록 계열 제거)
 - [x] 하단 배너 광고 삽입
 - [x] 빈 상태 텍스트 스타일 추가 (`stats_screen.dart:40` — TODO 주석)
 - [ ] 연속 방문 스트릭 표시 ("n일 연속 기록 중") — 필요 여부 검토 후 구현
@@ -117,6 +118,10 @@
   - 설정 UI: `SegmentedButton` 인라인 (바텀시트 → 인라인 전환)
 - [x] 캘린더 시작 요일 설정 (월요일 / 일요일)
 - [x] 데이터 내보내기 / 가져오기 (CSV)
+- [x] 테마 강조 색상 설정 — 빨강/주황/노랑/초록(기본)/하늘/파랑/남색/보라/회색/검정 10종
+  - `lib/core/models/theme_accent_provider.dart` 신규 — `ThemeAccent` enum, `themeAccentProvider`, `loadThemeAccent()` / `saveThemeAccent()`
+  - `AppTheme.light()/dark()`에 `accent` 매개변수 추가 — green이면 기존 팔레트 그대로, 그 외에는 primary 계열만 교체
+  - 더보기 > 설정에 "테마" 항목 추가, 원형 스와치 그리드 바텀시트(`_ThemeAccentPickerSheet`)로 선택
 
 ### 공용 위젯
 - [x] `entry_card.dart` — 기분 색상, 레이블, 메모, 시간 표시

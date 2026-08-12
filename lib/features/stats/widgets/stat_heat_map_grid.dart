@@ -4,12 +4,6 @@
 import 'package:flutter/material.dart';
 import 'package:poopoolog/shared/theme/app_theme.dart';
 
-// ── 히트맵 단계별 색상 (비율 기준, 초록 계열) ────────────────────────────────
-const _kHeat1 = Color(0xFFD4EDDF); //  1 ~ 25%  (연한 민트 그린)
-const _kHeat2 = Color(0xFF7DC4A0); // 26 ~ 50%  (라이트 그린)
-const _kHeat3 = Color(0xFF3DA06C); // 51 ~ 75%  (AppTheme.moodGood)
-const _kHeat4 = Color(0xFF1B5E3A); // 76 ~100%  (다크 포레스트 그린)
-
 // ── 시간대 그룹 (상세 바텀시트용) ────────────────────────────────────────────
 const _kGroups = <(String, List<int>)>[
   ('새벽', [0, 1, 2, 3, 4, 5]),
@@ -17,10 +11,6 @@ const _kGroups = <(String, List<int>)>[
   ('오후', [12, 13, 14, 15, 16, 17]),
   ('저녁', [18, 19, 20, 21, 22, 23]),
 ];
-
-// ── 범례 색상 순서 ─────────────────────────────────────────────────────────
-// surfaceContainerHighest는 런타임에 결정되므로 직접 BuildContext에서 가져온다.
-const _kLegendColors = [_kHeat1, _kHeat2, _kHeat3, _kHeat4];
 
 // ---------------------------------------------------------------------------
 // 메인 위젯
@@ -36,15 +26,25 @@ class StatHeatMapGrid extends StatelessWidget {
 
   const StatHeatMapGrid({super.key, required this.hourlyCounts});
 
+  /// 테마 강조 색상(primary) 기준 4단계 히트맵 색상.
+  /// 연한 단계는 흰색 쪽으로, 진한 단계는 검정 쪽으로 blend해 만든다.
+  static List<Color> heatShades(ColorScheme cs) => [
+    Color.lerp(cs.primary, Colors.white, 0.75)!,
+    Color.lerp(cs.primary, Colors.white, 0.45)!,
+    cs.primary,
+    Color.lerp(cs.primary, Colors.black, 0.35)!,
+  ];
+
   /// hourlyCounts 비율 기반 히트맵 색상.
   /// 격자(기본 화면)와 바 차트(상세 시트)에서 공통으로 사용한다.
   static Color heatColor(int count, int maxCount, ColorScheme cs) {
     if (count == 0 || maxCount == 0) return cs.surfaceContainerHighest;
     final ratio = count / maxCount;
-    if (ratio <= 0.25) return _kHeat1;
-    if (ratio <= 0.50) return _kHeat2;
-    if (ratio <= 0.75) return _kHeat3;
-    return _kHeat4;
+    final shades = heatShades(cs);
+    if (ratio <= 0.25) return shades[0];
+    if (ratio <= 0.50) return shades[1];
+    if (ratio <= 0.75) return shades[2];
+    return shades[3];
   }
 
   /// 범례에 사용되는 10×10 색상 박스 위젯을 반환한다.
@@ -162,7 +162,7 @@ class StatHeatMapGrid extends StatelessWidget {
                 ),
                 const SizedBox(width: 2),
                 _legendBox(cs.surfaceContainerHighest),
-                for (final c in _kLegendColors) _legendBox(c),
+                for (final c in heatShades(cs)) _legendBox(c),
                 const SizedBox(width: 2),
                 Text(
                   '많음',
@@ -603,15 +603,15 @@ class _HourDetailSheet extends StatelessWidget {
                       vertical: 2,
                     ),
                     decoration: BoxDecoration(
-                      color: _kHeat1,
+                      color: StatHeatMapGrid.heatShades(cs)[0],
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Text(
+                    child: Text(
                       '최다',
                       style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w600,
-                        color: _kHeat4,
+                        color: StatHeatMapGrid.heatShades(cs)[3],
                       ),
                     ),
                   )

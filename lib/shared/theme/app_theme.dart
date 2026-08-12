@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:poopoolog/core/models/theme_accent_provider.dart';
 
 // ---------------------------------------------------------------------------
 // 색상 팔레트 원시 상수
@@ -198,9 +199,11 @@ class AppTheme {
   /// 안 감 — 옅고 차가운 회색 (moodNone보다 밝고 채도 낮음)
   static const Color moodNotVisited = Color(0xFFC4CCCA);
 
-  /// Material 3 라이트 테마.
-  static ThemeData light() => _buildTheme(
-    cs: _lightColorScheme,
+  /// Material 3 라이트 테마. accent가 green(기본값)이면 기존 색상과 완전히 동일하다.
+  static ThemeData light({ThemeAccent accent = ThemeAccent.green}) => _buildTheme(
+    cs: accent == ThemeAccent.green
+        ? _lightColorScheme
+        : _accentColorScheme(_lightColorScheme, accent, isDark: false),
     scaffoldBg: AppColors.lightBackground,
     appBarBg: AppColors.lightBackground,
     appBarTextColor: AppColors.lightTextPrimary,
@@ -215,9 +218,11 @@ class AppTheme {
     dragHandleColor: AppColors.lightOutline,
   );
 
-  /// Material 3 다크 테마.
-  static ThemeData dark() => _buildTheme(
-    cs: _darkColorScheme,
+  /// Material 3 다크 테마. accent가 green(기본값)이면 기존 색상과 완전히 동일하다.
+  static ThemeData dark({ThemeAccent accent = ThemeAccent.green}) => _buildTheme(
+    cs: accent == ThemeAccent.green
+        ? _darkColorScheme
+        : _accentColorScheme(_darkColorScheme, accent, isDark: true),
     scaffoldBg: AppColors.darkBackground,
     appBarBg: AppColors.darkBackground,
     appBarTextColor: AppColors.darkTextPrimary,
@@ -230,6 +235,47 @@ class AppTheme {
     inputFillColor: AppColors.darkSurfaceContainer,
     dividerColor: AppColors.darkOutline,
     dragHandleColor: AppColors.darkOutlineVariant,
+  );
+}
+
+/// 선택한 강조 색상을 기준으로 primary 계열(primary·container·inverse)만 교체한
+/// ColorScheme을 생성한다. surface·outline 등 나머지는 기존 팔레트를 유지해
+/// 색상마다 전체 팔레트를 새로 만들지 않아도 통일감 있는 화면을 유지한다.
+ColorScheme _accentColorScheme(
+  ColorScheme base,
+  ThemeAccent accent, {
+  required bool isDark,
+}) {
+  final primary = isDark ? accent.darkPrimary : accent.lightPrimary;
+
+  final onPrimary = isDark
+      ? (accent == ThemeAccent.black
+            ? Colors.white
+            : Color.lerp(primary, Colors.black, 0.85)!)
+      : Colors.white;
+
+  final primaryContainer = Color.lerp(
+    primary,
+    isDark ? Colors.black : Colors.white,
+    isDark ? 0.55 : 0.82,
+  )!;
+  final onPrimaryContainer = Color.lerp(
+    primary,
+    isDark ? Colors.white : Colors.black,
+    isDark ? 0.75 : 0.55,
+  )!;
+
+  final inversePrimary = isDark
+      ? Color.lerp(accent.lightPrimary, Colors.black, 0.25)!
+      : accent.darkPrimary;
+
+  return base.copyWith(
+    primary: primary,
+    onPrimary: onPrimary,
+    primaryContainer: primaryContainer,
+    onPrimaryContainer: onPrimaryContainer,
+    inversePrimary: inversePrimary,
+    surfaceTint: primary,
   );
 }
 

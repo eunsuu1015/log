@@ -9,6 +9,7 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:poopoolog/core/ads/ad_service.dart';
 import 'package:poopoolog/core/iap/iap_provider.dart';
 import 'package:poopoolog/core/models/mood_display_provider.dart';
+import 'package:poopoolog/core/models/theme_accent_provider.dart';
 import 'package:poopoolog/core/settings/display_settings.dart';
 import 'package:poopoolog/features/onboarding/onboarding_screen.dart';
 import 'package:poopoolog/shared/theme/app_theme.dart';
@@ -25,6 +26,7 @@ void main() async {
 
   // 초기화와 최소 1초를 동시에 대기
   ThemeMode initialThemeMode = ThemeMode.system;
+  ThemeAccent initialThemeAccent = ThemeAccent.green;
   MoodDisplay initialMoodDisplay = MoodDisplay.dot;
   bool initialSunday = true;
   bool initialAdsRemoved = false;
@@ -40,6 +42,7 @@ void main() async {
       final savedIndex = prefs.getInt(kThemeModeKey);
       initialThemeMode =
           savedIndex != null ? ThemeMode.values[savedIndex] : ThemeMode.system;
+      initialThemeAccent = await loadThemeAccent();
       initialMoodDisplay = await loadMoodDisplay();
       initialSunday = prefs.getBool(kStartWeekdaySundayKey) ?? true;
       initialAdsRemoved = prefs.getBool(kAdsRemovedKey) ?? false;
@@ -53,6 +56,7 @@ void main() async {
     ProviderScope(
       overrides: [
         themeModeProvider.overrideWith((_) => initialThemeMode),
+        themeAccentProvider.overrideWith((_) => initialThemeAccent),
         moodDisplayProvider.overrideWith((_) => initialMoodDisplay),
         startWeekdaySundayProvider.overrideWith((_) => initialSunday),
         adsRemovedProvider.overrideWith((_) => initialAdsRemoved),
@@ -91,6 +95,7 @@ class PooPooLogApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeModeProvider);
+    final themeAccent = ref.watch(themeAccentProvider);
 
     return MaterialApp(
       localizationsDelegates: const [
@@ -104,8 +109,8 @@ class PooPooLogApp extends ConsumerWidget {
       ],
       title: 'PooPooLog',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.light(),
-      darkTheme: AppTheme.dark(),
+      theme: AppTheme.light(accent: themeAccent),
+      darkTheme: AppTheme.dark(accent: themeAccent),
       themeMode: themeMode,
       home: showOnboarding ? const OnboardingScreen() : const AppShell(),
     );

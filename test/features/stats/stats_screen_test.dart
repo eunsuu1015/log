@@ -354,6 +354,8 @@ void main() {
   group('StatHeatMapGrid.heatColor 단위 테스트', () {
     // ThemeData 없이 ColorScheme만 사용하므로 임의 ColorScheme 사용
     final cs = ColorScheme.fromSeed(seedColor: Colors.blue);
+    // heatColor는 cs.primary 기준 4단계(heatShades)를 사용한다 (테마 강조 색상 반영).
+    final shades = StatHeatMapGrid.heatShades(cs);
 
     test('count == 0 → surfaceContainerHighest 반환', () {
       final color = StatHeatMapGrid.heatColor(0, 10, cs);
@@ -365,49 +367,60 @@ void main() {
       expect(color, cs.surfaceContainerHighest);
     });
 
-    test('비율 25% 이하 → _kHeat1 (0xFFD4EDDF)', () {
+    test('비율 25% 이하 → heatShades[0]', () {
       // count=1, maxCount=10 → ratio=0.1 ≤ 0.25
       final color = StatHeatMapGrid.heatColor(1, 10, cs);
-      expect(color.toARGB32(), 0xFFD4EDDF);
+      expect(color, shades[0]);
     });
 
-    test('비율 정확히 25% → _kHeat1', () {
+    test('비율 정확히 25% → heatShades[0]', () {
       // count=25, maxCount=100 → ratio=0.25
       final color = StatHeatMapGrid.heatColor(25, 100, cs);
-      expect(color.toARGB32(), 0xFFD4EDDF);
+      expect(color, shades[0]);
     });
 
-    test('비율 26~50% → _kHeat2 (0xFF7DC4A0)', () {
+    test('비율 26~50% → heatShades[1]', () {
       // count=3, maxCount=10 → ratio=0.3
       final color = StatHeatMapGrid.heatColor(3, 10, cs);
-      expect(color.toARGB32(), 0xFF7DC4A0);
+      expect(color, shades[1]);
     });
 
-    test('비율 정확히 50% → _kHeat2', () {
+    test('비율 정확히 50% → heatShades[1]', () {
       final color = StatHeatMapGrid.heatColor(5, 10, cs);
-      expect(color.toARGB32(), 0xFF7DC4A0);
+      expect(color, shades[1]);
     });
 
-    test('비율 51~75% → _kHeat3 (0xFF3DA06C)', () {
+    test('비율 51~75% → heatShades[2] (cs.primary)', () {
       // count=6, maxCount=10 → ratio=0.6
       final color = StatHeatMapGrid.heatColor(6, 10, cs);
-      expect(color.toARGB32(), 0xFF3DA06C);
+      expect(color, shades[2]);
+      expect(color, cs.primary);
     });
 
-    test('비율 정확히 75% → _kHeat3', () {
+    test('비율 정확히 75% → heatShades[2]', () {
       final color = StatHeatMapGrid.heatColor(75, 100, cs);
-      expect(color.toARGB32(), 0xFF3DA06C);
+      expect(color, shades[2]);
     });
 
-    test('비율 76~100% → _kHeat4 (0xFF1B5E3A)', () {
+    test('비율 76~100% → heatShades[3]', () {
       // count=9, maxCount=10 → ratio=0.9
       final color = StatHeatMapGrid.heatColor(9, 10, cs);
-      expect(color.toARGB32(), 0xFF1B5E3A);
+      expect(color, shades[3]);
     });
 
-    test('count == maxCount (100%) → _kHeat4', () {
+    test('count == maxCount (100%) → heatShades[3]', () {
       final color = StatHeatMapGrid.heatColor(10, 10, cs);
-      expect(color.toARGB32(), 0xFF1B5E3A);
+      expect(color, shades[3]);
+    });
+
+    test('cs.primary가 바뀌면 heatColor 결과도 함께 바뀐다 (테마 강조 색상 반영)', () {
+      final greenCs = ColorScheme.fromSeed(seedColor: Colors.green);
+      final purpleCs = ColorScheme.fromSeed(seedColor: Colors.purple);
+      final greenColor = StatHeatMapGrid.heatColor(6, 10, greenCs);
+      final purpleColor = StatHeatMapGrid.heatColor(6, 10, purpleCs);
+      expect(greenColor, greenCs.primary);
+      expect(purpleColor, purpleCs.primary);
+      expect(greenColor, isNot(purpleColor));
     });
   });
 
